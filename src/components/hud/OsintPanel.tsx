@@ -4,7 +4,6 @@ import { useState } from "react";
 import GlassPanel from "@/components/ui/GlassPanel";
 import GlowButton from "@/components/ui/GlowButton";
 import { useOsintMap } from "@/hooks/useOsintMap";
-import { formatDecimal } from "@/lib/utils";
 import type { ViewportState } from "@/types/map";
 
 interface OsintPanelProps {
@@ -78,28 +77,76 @@ export default function OsintPanel({
             {isAnalyzing ? "ANALYZING TARGETS..." : "RUN AI THREAT ANALYSIS"}
           </GlowButton>
 
-          {/* Target List (Mocked / Shortened) */}
-          <div className="flex flex-col gap-2">
+          {/* Target List */}
+          <div className="flex flex-col gap-1.5">
             <h4 className="text-[9px] font-mono text-neutral-500 uppercase mb-1">Detected Signals</h4>
-            {flights.slice(0, 10).map((f) => (
-              <div key={f.icao24} className="flex justify-between items-center p-2 bg-[rgba(255,0,85,0.05)] border border-plasma-pink/10 text-[10px] font-mono">
-                <div className="flex flex-col">
-                  <span className="text-white font-bold flex items-center gap-1.5">
-                    {f.callsign || "UNKNOWN"}
-                    {!f.altitude && (
-                      <span className="bg-plasma-pink text-black px-1 py-0.5 rounded-sm text-[8px] animate-pulse leading-none">
-                        STEALTH
+            {flights.slice(0, 10).map((f) => {
+              const isEmergency = !!f.squawk_alert || !!f.emergency;
+              const isMilitary  = f.category === 20;
+              const borderColor = isEmergency ? "border-yellow-500/40" : isMilitary ? "border-plasma-pink/30" : "border-plasma-pink/10";
+              const callsignColor = isEmergency ? "text-yellow-400" : isMilitary ? "text-plasma-pink" : "text-white";
+
+              // Vertical rate display
+              const vr = f.vert_rate;
+              const vrIcon = !vr ? "" : vr > 200 ? "↑" : vr < -200 ? "↓" : "→";
+              const vrColor = !vr ? "text-neutral-600" : vr > 200 ? "text-green-400" : vr < -200 ? "text-red-400" : "text-neutral-400";
+
+              return (
+                <div
+                  key={f.icao24}
+                  className={`p-2 bg-[rgba(255,0,85,0.04)] border ${borderColor} text-[10px] font-mono ${isEmergency ? "animate-pulse" : ""}`}
+                >
+                  {/* Top row: callsign + type + alert badges */}
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <div className="flex items-center gap-1 flex-wrap min-w-0">
+                      <span className={`font-bold truncate ${callsignColor}`}>
+                        {f.callsign}
                       </span>
-                    )}
-                  </span>
-                  <span className="text-neutral-500">{f.origin_country}</span>
+                      {f.aircraft_type && (
+                        <span className="text-[8px] bg-neutral-800 text-neutral-400 px-1 rounded">
+                          {f.aircraft_type}
+                        </span>
+                      )}
+                      {f.squawk_alert && (
+                        <span className="text-[8px] bg-yellow-500 text-black px-1 rounded font-bold leading-none">
+                          {f.squawk_alert}
+                        </span>
+                      )}
+                      {f.is_interesting && !isMilitary && (
+                        <span className="text-[8px] bg-orange-600/80 text-white px-1 rounded leading-none">★</span>
+                      )}
+                      {f.is_pia && (
+                        <span className="text-[8px] bg-purple-700/80 text-white px-1 rounded leading-none">PIA</span>
+                      )}
+                      {!f.altitude && (
+                        <span className="text-[8px] bg-plasma-pink text-black px-1 rounded leading-none">
+                          STEALTH
+                        </span>
+                      )}
+                    </div>
+                    {/* Altitude */}
+                    <span className="text-cyan-400 shrink-0">
+                      {f.altitude ? `${Math.round(f.altitude / 100) * 100}m` : "---"}
+                    </span>
+                  </div>
+
+                  {/* Bottom row: registration / country + vert rate + squawk */}
+                  <div className="flex items-center justify-between text-[9px]">
+                    <span className="text-neutral-500 truncate">
+                      {f.registration ? f.registration : f.origin_country}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {vr !== null && (
+                        <span className={vrColor}>{vrIcon} {Math.abs(vr) > 50 ? `${Math.round(Math.abs(vr) / 100) * 100}` : ""}</span>
+                      )}
+                      <span className="text-neutral-600">
+                        {f.squawk && f.squawk !== "----" ? f.squawk : ""}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-cyan-400">{f.altitude ? formatDecimal(f.altitude, 0) : "---"}m</span>
-                  <span className="text-neutral-500">SQK: {f.squawk || "---"}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {flights.length > 10 && (
               <div className="text-[9px] font-mono text-neutral-500 text-center py-2">
                 + {flights.length - 10} MORE TARGETS

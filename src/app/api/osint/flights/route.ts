@@ -521,29 +521,65 @@ export async function GET(request: Request) {
         } else {
           const data = await response.json();
           const freshFlights = (data.ac || []).map((item: any) => {
-            const altFeet = typeof item.alt_baro === "number" ? item.alt_baro : null;
+            // Altitude: prefer barometric, fallback to geometric
+            const altFeet =
+              typeof item.alt_baro === "number" ? item.alt_baro
+              : typeof item.alt_geom === "number" ? item.alt_geom
+              : null;
             const altitude = altFeet !== null ? Math.round(altFeet * 0.3048) : null;
-            
+
+            // Geometric altitude (GPS — more accurate)
+            const altGeomFeet = typeof item.alt_geom === "number" ? item.alt_geom : null;
+            const alt_geom = altGeomFeet !== null ? Math.round(altGeomFeet * 0.3048) : null;
+
             const speedKnots = typeof item.gs === "number" ? item.gs : 0;
             const velocity = Math.round(speedKnots * 0.5144);
-            
-            const isMilitary = typeof item.dbFlags === "number" ? (item.dbFlags & 1) !== 0 : false;
+
+            // dbFlags bitmask
+            const flags = typeof item.dbFlags === "number" ? item.dbFlags : 0;
+            const isMilitary     = (flags & 1) !== 0;
+            const is_interesting = (flags & 2) !== 0;
+            const is_pia         = (flags & 4) !== 0; // Privacy ICAO Address
+            const is_ladd        = (flags & 8) !== 0; // Limiting Aircraft Data Displayed
             const category = isMilitary ? 20 : 1;
 
-            const callsign = (item.flight || "UNKNOWN").trim();
+            // Callsign fallback: broadcast callsign → tail number → ICAO hex
+            const rawCallsign = item.flight?.trim();
+            const callsign = (rawCallsign || item.r || item.hex || "UNKNOWN").toUpperCase();
+
+            // Squawk special code decoding
+            const squawk = item.squawk || null;
+            const squawk_alert =
+              squawk === "7700" ? "EMERGENCY" :
+              squawk === "7600" ? "RADIO_FAIL" :
+              squawk === "7500" ? "HIJACK" : null;
+
+            // Emergency from ADS-B message
+            const emergency = (item.emergency && item.emergency !== "none") ? item.emergency : null;
 
             return {
               icao24: item.hex,
-              callsign: callsign,
+              callsign,
+              registration: item.r || null,            // Tail number (VN-A321, N12345...)
+              aircraft_type: item.t || null,            // ICAO type code (A320, B738, F16...)
               origin_country: lookupCountry(item.hex),
               longitude: item.lon,
               latitude: item.lat,
-              altitude: altitude,
-              velocity: velocity,
+              altitude,
+              alt_geom,                                 // GPS altitude (meters)
+              velocity,
+              vert_rate: item.vert_rate || null,        // ft/min — positive=climbing
               true_track: item.track || 0,
-              squawk: item.squawk || null,
+              squawk,
+              squawk_alert,                             // "EMERGENCY"|"RADIO_FAIL"|"HIJACK"|null
+              emergency,                                // ADS-B emergency string
               spi: false,
-              category: category,
+              category,
+              is_interesting,                           // adsb.lol "interesting" flag
+              is_pia,                                   // Privacy ICAO Address (anonymous)
+              is_ladd,                                  // Limiting Aircraft Data Displayed
+              signal_quality: item.messages || null,    // Message count (higher = more reliable)
+              seen: item.seen || null,                  // Seconds since last signal
               lastSeen: now
             };
           }).filter((f: any) => f.latitude && f.longitude);
