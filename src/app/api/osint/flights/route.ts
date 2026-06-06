@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 
 interface QueryArea {
   lat: number;
@@ -8,8 +8,21 @@ interface QueryArea {
   timestamp: number;
 }
 
-// Check if Vercel KV is configured (Vercel automatically injects REST API environment variables)
-const isKVEnabled = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+// Hỗ trợ cả 2 bộ biến:
+// - KV_REST_API_URL + KV_REST_API_TOKEN  → Upstash tạo qua Vercel Integration
+// - UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN → Upstash tạo trực tiếp trên console.upstash.com
+const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const isKVEnabled = !!(redisUrl && redisToken);
+
+// Lazy singleton — only created when env vars are present
+let _redis: Redis | null = null;
+function getRedis(): Redis {
+  if (!_redis) {
+    _redis = new Redis({ url: redisUrl!, token: redisToken! });
+  }
+  return _redis;
+}
 
 // Fallback in-memory variables for local development (no database required)
 let globalFlightCacheMem: any[] | null = null;
@@ -20,7 +33,7 @@ let lastExternalFetchTimeMem = 0;
 async function getFlightCache(): Promise<any[]> {
   if (isKVEnabled) {
     try {
-      return (await kv.get("osint:flights:cache")) || [];
+      return (await getRedis().get<any[]>("osint:flights:cache")) || [];
     } catch (e) {
       console.error("[OSINT KV] Get flight cache error:", e);
     }
@@ -31,7 +44,7 @@ async function getFlightCache(): Promise<any[]> {
 async function setFlightCache(cache: any[]): Promise<void> {
   if (isKVEnabled) {
     try {
-      await kv.set("osint:flights:cache", cache, { ex: 90 });
+      await getRedis().set("osint:flights:cache", cache, { ex: 90 });
       return;
     } catch (e) {
       console.error("[OSINT KV] Set flight cache error:", e);
@@ -43,7 +56,7 @@ async function setFlightCache(cache: any[]): Promise<void> {
 async function getRecentQueries(): Promise<QueryArea[]> {
   if (isKVEnabled) {
     try {
-      return (await kv.get("osint:flights:queries")) || [];
+      return (await getRedis().get<QueryArea[]>("osint:flights:queries")) || [];
     } catch (e) {
       console.error("[OSINT KV] Get recent queries error:", e);
     }
@@ -54,7 +67,7 @@ async function getRecentQueries(): Promise<QueryArea[]> {
 async function setRecentQueries(queries: QueryArea[]): Promise<void> {
   if (isKVEnabled) {
     try {
-      await kv.set("osint:flights:queries", queries, { ex: 15 });
+      await getRedis().set("osint:flights:queries", queries, { ex: 15 });
       return;
     } catch (e) {
       console.error("[OSINT KV] Set recent queries error:", e);
@@ -66,7 +79,7 @@ async function setRecentQueries(queries: QueryArea[]): Promise<void> {
 async function getLastExternalFetchTime(): Promise<number> {
   if (isKVEnabled) {
     try {
-      return Number(await kv.get("osint:flights:last_fetch")) || 0;
+      return Number(await getRedis().get<number>("osint:flights:last_fetch")) || 0;
     } catch (e) {
       console.error("[OSINT KV] Get last fetch time error:", e);
     }
@@ -77,7 +90,7 @@ async function getLastExternalFetchTime(): Promise<number> {
 async function setLastExternalFetchTime(time: number): Promise<void> {
   if (isKVEnabled) {
     try {
-      await kv.set("osint:flights:last_fetch", time, { ex: 10 });
+      await getRedis().set("osint:flights:last_fetch", time, { ex: 10 });
       return;
     } catch (e) {
       console.error("[OSINT KV] Set last fetch time error:", e);
@@ -89,7 +102,7 @@ async function setLastExternalFetchTime(time: number): Promise<void> {
 async function getLastSimulationTime(): Promise<number> {
   if (isKVEnabled) {
     try {
-      return Number(await kv.get("osint:flights:last_sim")) || Date.now();
+      return Number(await getRedis().get<number>("osint:flights:last_sim")) || Date.now();
     } catch (e) {
       console.error("[OSINT KV] Get last simulation time error:", e);
     }
@@ -100,7 +113,7 @@ async function getLastSimulationTime(): Promise<number> {
 async function setLastSimulationTime(time: number): Promise<void> {
   if (isKVEnabled) {
     try {
-      await kv.set("osint:flights:last_sim", time, { ex: 60 });
+      await getRedis().set("osint:flights:last_sim", time, { ex: 60 });
       return;
     } catch (e) {
       console.error("[OSINT KV] Set last simulation time error:", e);
