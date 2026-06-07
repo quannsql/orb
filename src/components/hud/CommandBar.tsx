@@ -11,8 +11,8 @@ interface CommandBarProps {
   cursorLngLat: [number, number] | null;
   activeMode: SpectralMode | null;
   isConnected: boolean;
-  isOsintMode: boolean;
-  onToggleOsintMode: (enabled: boolean) => void;
+  activeSubMode: "satcom" | "osint" | "butterfly";
+  onChangeSubMode: (mode: "satcom" | "osint" | "butterfly") => void;
 }
 
 /**
@@ -23,8 +23,8 @@ export default function CommandBar({
   cursorLngLat,
   activeMode,
   isConnected,
-  isOsintMode,
-  onToggleOsintMode,
+  activeSubMode,
+  onChangeSubMode,
 }: CommandBarProps) {
   return (
     <div
@@ -34,13 +34,25 @@ export default function CommandBar({
       {/* Left section: Brand and coordinates */}
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 pr-4 border-r border-neutral-600/30">
-          <div className={`w-2 h-2 rounded-full animate-pulse ${isOsintMode ? "bg-plasma-pink shadow-[0_0_8px_rgba(255,0,85,0.6)]" : "bg-cyan-glow shadow-[0_0_8px_rgba(0,240,255,0.6)]"}`} />
-          <span className={`text-sm font-mono font-bold tracking-widest ${isOsintMode ? "text-plasma-pink drop-shadow-[0_0_8px_rgba(255,0,85,0.8)]" : "glow-text-cyan"}`}>
+          <div className={`w-2 h-2 rounded-full animate-pulse ${
+            activeSubMode === "osint"
+              ? "bg-plasma-pink shadow-[0_0_8px_rgba(255,0,85,0.6)]"
+              : activeSubMode === "butterfly"
+                ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"
+                : "bg-cyan-glow shadow-[0_0_8px_rgba(0,240,255,0.6)]"
+          }`} />
+          <span className={`text-sm font-mono font-bold tracking-widest ${
+            activeSubMode === "osint"
+              ? "text-plasma-pink drop-shadow-[0_0_8px_rgba(255,0,85,0.8)]"
+              : activeSubMode === "butterfly"
+                ? "text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+                : "glow-text-cyan"
+          }`}>
             ORB
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 hidden sm:flex">
           <DataLabel
             label="LAT"
             value={
@@ -50,6 +62,7 @@ export default function CommandBar({
             }
             color="white"
             size="sm"
+            className="w-[85px]"
           />
           <DataLabel
             label="LNG"
@@ -60,61 +73,79 @@ export default function CommandBar({
             }
             color="white"
             size="sm"
+            className="w-[85px]"
           />
         </div>
       </div>
 
       {/* Middle section: Viewport & Layer badge */}
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 hidden md:flex">
           <DataLabel
             label="ZOOM"
             value={viewport.zoom.toFixed(1)}
             color="white"
             size="sm"
+            className="w-12"
           />
           <DataLabel
             label="BRG"
             value={`${viewport.bearing.toFixed(0)}°`}
             color="white"
             size="sm"
+            className="w-12"
           />
           <DataLabel
             label="PITCH"
             value={`${viewport.pitch.toFixed(0)}°`}
             color="white"
             size="sm"
+            className="w-12"
           />
         </div>
 
-        {/* OSINT Toggle Switch */}
-        <div className="flex items-center pl-4 border-l border-neutral-600/30">
-          <button
-            onClick={() => onToggleOsintMode(!isOsintMode)}
-            className={`relative flex items-center w-32 h-6 rounded border font-mono text-[9px] font-bold uppercase transition-all duration-300 ${
-              isOsintMode
-                ? "border-plasma-pink bg-[rgba(255,0,85,0.1)] text-plasma-pink"
-                : "border-neutral-600/50 bg-black/40 text-neutral-400 hover:border-cyan-glow/50 hover:text-cyan-400"
-            }`}
-          >
-            <div className={`absolute left-0 top-0 h-full w-1/2 rounded-sm transition-all duration-300 ${
-              isOsintMode ? "translate-x-full bg-plasma-pink" : "bg-neutral-700"
-            }`} />
+        {/* 3-Way Mode Toggle Switch */}
+        <div className="flex items-center pl-0 md:pl-4 border-l-0 md:border-l border-neutral-600/30">
+          <div className="relative flex items-center w-48 sm:w-56 h-6 rounded border border-neutral-600/50 bg-black/40 font-mono text-[8px] font-bold uppercase overflow-hidden">
+            {/* Sliding Background */}
+            <div 
+              className={`absolute top-0 bottom-0 w-[33.3%] rounded-sm transition-all duration-300 ${
+                activeSubMode === "osint"
+                  ? "left-[33.3%] bg-plasma-pink"
+                  : activeSubMode === "butterfly"
+                    ? "left-[66.6%] bg-purple-600"
+                    : "left-0 bg-neutral-700"
+              }`} 
+            />
             
-            <div className={`relative z-10 flex-1 text-center transition-colors ${
-              !isOsintMode ? "text-white" : ""
-            }`}>
+            <button
+              onClick={() => onChangeSubMode("satcom")}
+              className={`relative z-10 flex-1 text-center transition-colors py-1 ${
+                activeSubMode === "satcom" ? "text-white font-bold" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
               SAT-COM
-            </div>
-            <div className={`relative z-10 flex-1 text-center transition-colors ${
-              isOsintMode ? "text-white" : ""
-            }`}>
+            </button>
+            <button
+              onClick={() => onChangeSubMode("osint")}
+              className={`relative z-10 flex-1 text-center transition-colors py-1 ${
+                activeSubMode === "osint" ? "text-white font-bold" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
               OSINT
-            </div>
-          </button>
+            </button>
+            <button
+              onClick={() => onChangeSubMode("butterfly")}
+              className={`relative z-10 flex-1 text-center transition-colors py-1 ${
+                activeSubMode === "butterfly" ? "text-white font-bold" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              BUTTERFLY
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 pl-4 border-l border-neutral-600/30">
+        <div className="flex items-center gap-2 pl-4 border-l border-neutral-600/30 hidden sm:flex">
           {activeMode ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[rgba(0,240,255,0.08)] border border-[rgba(0,240,255,0.2)] text-[10px] font-mono text-cyan-glow uppercase">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-glow" />

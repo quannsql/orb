@@ -62,5 +62,28 @@ export function useEventTicker(maxEvents = 50) {
     };
   }, [addEvent]);
 
+  useEffect(() => {
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string; type?: TickerEvent["type"] }>;
+      if (customEvent.detail && customEvent.detail.message) {
+        const newEvent: TickerEvent = {
+          id: generateId(),
+          timestamp: new Date(),
+          message: customEvent.detail.message,
+          type: customEvent.detail.type || "alert",
+        };
+        setEvents((prev) => {
+          const updated = [newEvent, ...prev];
+          return updated.slice(0, maxEvents);
+        });
+      }
+    };
+
+    document.addEventListener("add-ticker-event", handleCustomEvent as EventListener);
+    return () => {
+      document.removeEventListener("add-ticker-event", handleCustomEvent as EventListener);
+    };
+  }, [maxEvents]);
+
   return { events };
 }

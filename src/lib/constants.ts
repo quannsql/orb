@@ -11,7 +11,7 @@ export const MAP_CONFIG = {
   defaultBearing: 0,
   style: "mapbox://styles/mapbox/standard",
   maxZoom: 20,
-  minZoom: 2,
+  minZoom: 0,
   terrain3DExaggeration: 1.5,
   fogColor: "#050515", // Dark cyberpunk sky color
   fogHighColor: "#b026ff", // Neon Purple upper atmosphere

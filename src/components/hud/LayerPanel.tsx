@@ -41,7 +41,7 @@ export default function LayerPanel({
 
   return (
     <div 
-      className={`fixed left-0 top-12 bottom-12 z-30 flex flex-col transition-all duration-300`} 
+      className={`fixed left-4 bottom-[180px] z-30 flex flex-col transition-all duration-300 h-fit max-h-[calc(100vh-380px)]`} 
       id="layer-panel"
     >
       {/* Toggle button */}
@@ -60,11 +60,11 @@ export default function LayerPanel({
 
       {isOpen && (
         <GlassPanel
-          className="w-64 flex-1 slide-in-left cyber-scrollbar overflow-y-auto rounded-none border-y-0 border-l-0"
+          className="w-56 h-fit slide-in-left cyber-scrollbar overflow-y-auto"
           padding="sm"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-600/20">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-neutral-600/20">
             <h3 className="text-[10px] font-mono text-neutral-300 uppercase tracking-widest">
               Spectral Layers
             </h3>
@@ -74,7 +74,7 @@ export default function LayerPanel({
           </div>
 
           {/* Layer options */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             {SPECTRAL_LAYERS.map((layer) => {
               const isActive = activeMode === layer.mode;
               return (
@@ -85,7 +85,7 @@ export default function LayerPanel({
                     onModeChange(isActive ? null : layer.mode)
                   }
                   className={`
-                    flex items-start gap-3 p-2.5 rounded-none text-left transition-all duration-200
+                    flex items-start gap-2.5 p-2 rounded-none text-left transition-all duration-200
                     ${
                       isActive
                         ? "bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.15)]"
@@ -141,7 +141,7 @@ export default function LayerPanel({
 
           {/* Opacity slider */}
           {activeMode && (
-            <div className="mt-3 pt-3 border-t border-neutral-600/20">
+            <div className="mt-2 pt-2 border-t border-neutral-600/20">
               <CyberSlider
                 id="layer-opacity-slider"
                 min={0}
