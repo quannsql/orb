@@ -1,17 +1,38 @@
 import { NextResponse } from "next/server";
 import { queryGrok } from "@/lib/grok";
-import { cacheGet, cacheSet, checkRateLimit } from "@/lib/redis";
+import { cacheGet, cacheSet } from "@/lib/redis";
 import { initBackgroundWorker } from "@/lib/backgroundWorker";
+import { getSession, checkCORS, rateLimitByIP, rateLimitByUser } from "@/lib/auth-api";
 
 export async function POST(request: Request) {
   try {
     await initBackgroundWorker();
-    // 1. Rate Limiting Check
-    const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
-    const isAllowed = await checkRateLimit(ip, 5, 60); // Max 5 requests per minute
-    if (!isAllowed) {
+    
+    // 1. CORS validation
+    if (!checkCORS(request)) {
+      return NextResponse.json({ error: "Access denied: CORS validation failed" }, { status: 403 });
+    }
+
+    // 2. Authentication check
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: "Access denied: Authentication required" }, { status: 401 });
+    }
+
+    // 3. IP Rate Limiting Check
+    const isIPAllowed = await rateLimitByIP(request, 5, 60);
+    if (!isIPAllowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Maximum 5 simulations per minute." },
+        { status: 429 }
+      );
+    }
+
+    // 4. User Rate Limiting Check
+    const isUserAllowed = await rateLimitByUser(user.email, 5, 60);
+    if (!isUserAllowed) {
+      return NextResponse.json(
+        { error: "Operator rate limit exceeded. Maximum 5 simulations per minute." },
         { status: 429 }
       );
     }

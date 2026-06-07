@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getSession, checkCORS, rateLimitByIP, rateLimitByUser } from "@/lib/auth-api";
 
 const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey || "");
@@ -31,6 +32,35 @@ Be brief and direct in your text response.
 `;
 
 export async function POST(request: Request) {
+  // 1. CORS validation
+  if (!checkCORS(request)) {
+    return NextResponse.json({ error: "Access denied: CORS validation failed" }, { status: 403 });
+  }
+
+  // 2. Authentication check
+  const user = await getSession();
+  if (!user) {
+    return NextResponse.json({ error: "Access denied: Authentication required" }, { status: 401 });
+  }
+
+  // 3. IP Rate Limiting Check
+  const isIPAllowed = await rateLimitByIP(request, 15, 60);
+  if (!isIPAllowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Maximum 15 chats per minute." },
+      { status: 429 }
+    );
+  }
+
+  // 4. User Rate Limiting Check
+  const isUserAllowed = await rateLimitByUser(user.email, 15, 60);
+  if (!isUserAllowed) {
+    return NextResponse.json(
+      { error: "Operator rate limit exceeded. Maximum 15 chats per minute." },
+      { status: 429 }
+    );
+  }
+
   if (!apiKey || apiKey === "your_gemini_api_key_here") {
     return NextResponse.json(
       { error: "GOOGLE_GEMINI_API_KEY is not configured in .env.local" },

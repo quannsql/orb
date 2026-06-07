@@ -23,6 +23,9 @@ import {
   X
 } from "lucide-react";
 import type { SpectralMode } from "@/types/sentinel";
+import { useAuth } from "@/hooks/useAuth";
+import RestrictedAccessOverlay from "@/components/ui/RestrictedAccessOverlay";
+
 
 interface UnifiedWorkspaceProps {
   // Mode & Autopilot
@@ -69,10 +72,10 @@ interface UnifiedWorkspaceProps {
 }
 
 const SPECTRAL_MODES: { value: SpectralMode | null; label: string; desc: string }[] = [
-  { value: null, label: "BASE SATELLITE", desc: "True color Mapbox terrain projection" },
-  { value: "TRUE_COLOR", label: "TRUE COLOR (RGB)", desc: "Natural color satellite imagery (RGB)" },
-  { value: "NDVI", label: "NDVI (VEGETATION)", desc: "Normalized Difference Vegetation Index - monitors crop health & camouflage anomalies" },
-  { value: "MOISTURE", label: "NDMI (MOISTURE)", desc: "Normalized Difference Moisture Index - detects soil saturation, irrigation & dry risk" },
+  { value: null, label: "STANDARD SATELLITE MAP", desc: "Base Mapbox terrain view" },
+  { value: "TRUE_COLOR", label: "NATURAL COLORS (RGB)", desc: "Standard satellite camera imagery (RGB)" },
+  { value: "NDVI", label: "CROP HEALTH INDEX (NDVI)", desc: "Monitors vegetation, farming health & crop density" },
+  { value: "MOISTURE", label: "SOIL MOISTURE INDEX (NDMI)", desc: "Monitors water saturation, irrigation & dry risk" },
 ];
 
 const PRESETS = [
@@ -130,8 +133,10 @@ export default function UnifiedWorkspace({
   simulationStep,
   onClose
 }: UnifiedWorkspaceProps) {
+  const { user } = useAuth();
   // Accordion Section States
   const [expandTelemetry, setExpandTelemetry] = useState(true);
+
   const [expandLayers, setExpandLayers] = useState(true);
   const [expandTargets, setExpandTargets] = useState(true);
   const [expandBriefs, setExpandBriefs] = useState(true);
@@ -205,11 +210,11 @@ export default function UnifiedWorkspace({
             )}
             <Terminal size={14} className="text-cyan-glow animate-pulse" />
             <span className="text-[11px] font-extrabold tracking-wider uppercase text-white">
-              INTELLIGENCE WORKSPACE
+              CONTROL PANEL WORKSPACE
             </span>
           </div>
           <span className="text-[9px] bg-cyan-glow/10 text-cyan-glow border border-cyan-glow/20 px-1 font-bold">
-            v5.0_ALPHA
+            v5.0
           </span>
         </div>
 
@@ -224,7 +229,7 @@ export default function UnifiedWorkspace({
             >
               <div className="flex items-center gap-1.5">
                 <Activity size={12} className="text-cyan-glow" />
-                <span>Sector Control & Autopilot</span>
+                <span>Map Mode Settings</span>
               </div>
               {expandTelemetry ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </div>
@@ -237,19 +242,19 @@ export default function UnifiedWorkspace({
                     onClick={() => onChangeSubMode("satcom")}
                     className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "satcom" ? "bg-cyan-glow text-black font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    SAT-COM
+                    Satellite View
                   </button>
                   <button 
                     onClick={() => onChangeSubMode("osint")}
                     className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "osint" ? "bg-plasma-pink text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    OSINT
+                    Live Radar
                   </button>
                   <button 
                     onClick={() => onChangeSubMode("butterfly")}
                     className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "butterfly" ? "bg-purple-600 text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    BUTTERFLY
+                    Simulator
                   </button>
                 </div>
 
@@ -259,9 +264,9 @@ export default function UnifiedWorkspace({
                     <UserCheck size={13} className={isAutopilot ? "text-matrix-green" : "text-neutral-500"} />
                     <div>
                       <div className={`text-[9.5px] font-bold ${isAutopilot ? "text-matrix-green" : "text-neutral-300"}`}>
-                        AUTOPILOT STEERING
+                        AUTO-PILOT
                       </div>
-                      <div className="text-[7.5px] text-neutral-500">Auto-nav, scan & simulate threats</div>
+                      <div className="text-[7.5px] text-neutral-500">Auto-fly map and run simulations on new alerts</div>
                     </div>
                   </div>
                   <button
@@ -272,14 +277,14 @@ export default function UnifiedWorkspace({
                         : "bg-neutral-800 text-neutral-400 border border-neutral-700 hover:text-white"
                     }`}
                   >
-                    {isAutopilot ? "AUTOPILOT: ON" : "MANUAL"}
+                    {isAutopilot ? "AUTOPILOT: ON" : "MANUAL CONTROL"}
                   </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* ── SECTION 2: SENTINEL IMAGERY SPECTROMETRY ── */}
+          {/* ── SECTION 2: SATELLITE LAYERS ── */}
           <div className="border border-white/5 bg-void/40 p-2">
             <div 
               onClick={() => setExpandLayers(!expandLayers)}
@@ -287,7 +292,7 @@ export default function UnifiedWorkspace({
             >
               <div className="flex items-center gap-1.5">
                 <Layers size={12} className="text-cyan-glow" />
-                <span>Sentinel Spectrometry</span>
+                <span>Satellite Layers</span>
               </div>
               {expandLayers ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </div>
@@ -295,7 +300,7 @@ export default function UnifiedWorkspace({
             {expandLayers && (
               <div className="flex flex-col gap-2.5">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[8.5px] text-neutral-500 uppercase">Select Spectral Layer:</span>
+                  <span className="text-[8.5px] text-neutral-500 uppercase">Select Layer Filter:</span>
                   <div className="grid grid-cols-2 gap-1">
                     {SPECTRAL_MODES.map((mode) => (
                       <button
@@ -332,7 +337,7 @@ export default function UnifiedWorkspace({
             )}
           </div>
 
-          {/* ── SECTION 3: SECTOR TARGET SIGNALS MONITOR ── */}
+          {/* ── SECTION 3: LIVE RADAR SIGNAL SCANNER ── */}
           <div className="border border-white/5 bg-void/40 p-2">
             <div 
               onClick={() => setExpandTargets(!expandTargets)}
@@ -340,13 +345,17 @@ export default function UnifiedWorkspace({
             >
               <div className="flex items-center gap-1.5">
                 <Target size={12} className="text-plasma-pink" />
-                <span>Sector Target Monitor</span>
+                <span>Live Radar Scanner</span>
               </div>
               {expandTargets ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </div>
 
             {expandTargets && (
-              <div className="flex flex-col gap-2.5">
+              <div className="relative flex flex-col gap-2.5 min-h-[140px]">
+                {!user && (
+                  <RestrictedAccessOverlay moduleName="Live Radar" compact />
+                )}
+
                 {/* Active settings & counts */}
                 <div className="flex justify-between items-center gap-2 bg-black/40 p-1.5 border border-white/5">
                   <label className="flex items-center gap-1 cursor-pointer text-[9px] font-bold text-neutral-400 hover:text-white">
@@ -357,7 +366,7 @@ export default function UnifiedWorkspace({
                       className="accent-plasma-pink shrink-0" 
                     />
                     <Plane size={10} className="text-plasma-pink" />
-                    <span>AIR</span>
+                    <span>Air Traffic (ADSB)</span>
                   </label>
                   <label className="flex items-center gap-1 cursor-pointer text-[9px] font-bold text-neutral-400 hover:text-white">
                     <input 
@@ -367,11 +376,11 @@ export default function UnifiedWorkspace({
                       className="accent-cyan-400 shrink-0" 
                     />
                     <Anchor size={10} className="text-cyan-400" />
-                    <span>SEA</span>
+                    <span>Sea Traffic (AIS)</span>
                   </label>
                   
                   <span className="text-[10px] text-neutral-400 font-bold ml-auto shrink-0 bg-neutral-900 border border-white/5 px-1.5 py-0.5">
-                    SUM: {flights.length + (scanMaritime ? ships.size : 0)} TARGETS
+                    Total: {flights.length + (scanMaritime ? ships.size : 0)} Targets
                   </span>
                 </div>
 
@@ -382,7 +391,7 @@ export default function UnifiedWorkspace({
                   className="w-full text-[9px] py-1.5"
                   disabled={(flights.length === 0 && ships.size === 0) || isAnalyzingThreats}
                 >
-                  {isAnalyzingThreats ? "GENERATING THREAT ANALYSIS..." : "RUN AI SECTOR THREAT SPECTRUM"}
+                  {isAnalyzingThreats ? "Running AI Threat Scan..." : "Scan Sector with AI"}
                 </GlowButton>
 
                 {/* Signals logs - concise list */}
@@ -411,7 +420,7 @@ export default function UnifiedWorkspace({
             )}
           </div>
 
-          {/* ── SECTION 4: TACTICAL OSINT BRIEFINGS ── */}
+          {/* ── SECTION 4: AI THREAT ANALYSIS REPORT ── */}
           <div className="border border-white/5 bg-void/40 p-2">
             <div 
               onClick={() => setExpandBriefs(!expandBriefs)}
@@ -419,7 +428,7 @@ export default function UnifiedWorkspace({
             >
               <div className="flex items-center gap-1.5">
                 <ShieldAlert size={12} className="text-amber-500" />
-                <span>Tactical Analysis Brief</span>
+                <span>AI Threat Analysis Report</span>
               </div>
               {expandBriefs ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </div>
@@ -430,7 +439,7 @@ export default function UnifiedWorkspace({
                 {threatAnalysisResult && (
                   <div className="bg-amber-500/5 border border-amber-500/25 p-2 rounded-xs">
                     <div className="flex justify-between items-center border-b border-amber-500/20 pb-1 mb-1.5">
-                      <span className="text-[8.5px] font-bold text-amber-500 uppercase tracking-widest">SECTOR ANOMALY SCAN</span>
+                      <span className="text-[8.5px] font-bold text-amber-500 uppercase tracking-widest">AI Location Anomaly Scan</span>
                       <button onClick={onClearThreatAnalysis} className="text-[8.5px] text-neutral-500 hover:text-white uppercase">[ CLEAR ]</button>
                     </div>
                     <div className="flex justify-between items-center text-[9px] font-extrabold text-white uppercase mb-1">
@@ -449,7 +458,7 @@ export default function UnifiedWorkspace({
                 {activeBriefing ? (
                   <div className="bg-plasma-pink/5 border border-plasma-pink/20 p-2 rounded-xs">
                     <div className="flex justify-between items-center border-b border-plasma-pink/20 pb-1 mb-1">
-                      <span className="text-[8.5px] font-extrabold text-plasma-pink uppercase tracking-widest">CLASSIFIED INTEL REPORT</span>
+                      <span className="text-[8.5px] font-extrabold text-plasma-pink uppercase tracking-widest">AI Incident Report</span>
                       <button onClick={onCloseBriefing} className="text-[8.5px] text-neutral-500 hover:text-white uppercase">[ CLOSE ]</button>
                     </div>
                     
@@ -479,14 +488,14 @@ export default function UnifiedWorkspace({
                   </div>
                 ) : !threatAnalysisResult && (
                   <div className="text-[8.5px] text-neutral-600 text-center py-4 border border-dashed border-white/5 italic">
-                    No active briefing loaded. Select an incident from the Warning Log below or trigger a sector threat scan.
+                    No active intelligence report loaded. Click on an alert in the Incident Log below or run an AI threat scan.
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* ── SECTION 5: GEOPOLITICAL BUTTERFLY SIMULATOR ── */}
+          {/* ── SECTION 5: GEOPOLITICAL IMPACT SIMULATOR ── */}
           <div className="border border-white/5 bg-void/40 p-2">
             <div 
               onClick={() => setExpandSimulation(!expandSimulation)}
@@ -500,7 +509,11 @@ export default function UnifiedWorkspace({
             </div>
 
             {expandSimulation && (
-              <div className="flex flex-col gap-2.5">
+              <div className="relative flex flex-col gap-2.5 min-h-[200px]">
+                {!user && (
+                  <RestrictedAccessOverlay moduleName="Geopolitical Simulator" />
+                )}
+
                 
                 {/* 1. Setup mode (only if simulation is not running/completed) */}
                 {!simulationResult && !simulationLoading && (
@@ -547,37 +560,36 @@ export default function UnifiedWorkspace({
                         className="w-full bg-black/45 border border-purple-500/20 p-1.5 text-neutral-200 focus:outline-none focus:border-purple-400 resize-none text-[9px]"
                       />
                     </div>
-
                     <GlowButton
                       onClick={runSimulation}
                       variant="white"
                       className="w-full text-[9px] py-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
                       disabled={!clickedLatLng || !scenarioInput.trim()}
                     >
-                      <Play size={10} className="mr-1" /> RUN BUTTERFLY ENGINE
+                      <Play size={10} className="mr-1" /> Run Simulation
                     </GlowButton>
                   </div>
                 )}
-
+ 
                 {/* 2. Simulation Loading / Agent loops */}
                 {simulationLoading && (
                   <div className="flex flex-col gap-2 p-2 bg-purple-950/10 border border-purple-500/20 text-[9px]">
                     <div className="flex items-center gap-1.5 font-bold text-purple-400 uppercase tracking-widest animate-pulse">
                       <span className="cyber-spinner border-purple-400 w-3.5 h-3.5" />
-                      <span>Simulating Cascade...</span>
+                      <span>Running Simulation...</span>
                     </div>
                     <div className="flex flex-col gap-1 border-t border-purple-500/10 pt-1.5 text-neutral-400 font-mono text-[8.5px]">
                       <div className={simulationStep >= 1 ? "text-purple-300 font-semibold" : "text-neutral-600"}>
-                        {simulationStep > 1 ? "✔" : simulationStep === 1 ? "⚡" : "○"} [INIT] Agentic node pipe activated
+                        {simulationStep > 1 ? "✔" : simulationStep === 1 ? "⚡" : "○"} [1/4] Starting simulation...
                       </div>
                       <div className={simulationStep >= 2 ? "text-purple-300 font-semibold" : "text-neutral-600"}>
-                        {simulationStep > 2 ? "✔" : simulationStep === 2 ? "⚡" : "○"} [MILITARY] Projecting security containment
+                        {simulationStep > 2 ? "✔" : simulationStep === 2 ? "⚡" : "○"} [2/4] Analyzing local security impact...
                       </div>
                       <div className={simulationStep >= 3 ? "text-purple-300 font-semibold" : "text-neutral-600"}>
-                        {simulationStep > 3 ? "✔" : simulationStep === 3 ? "⚡" : "○"} [ECONOMICS] Mapping trade routes bypass
+                        {simulationStep > 3 ? "✔" : simulationStep === 3 ? "⚡" : "○"} [3/4] Analyzing trade and economic impact...
                       </div>
                       <div className={simulationStep >= 4 ? "text-purple-300 font-semibold" : "text-neutral-600"}>
-                        {simulationStep > 4 ? "✔" : simulationStep === 4 ? "⚡" : "○"} [SOCIOLOGY] Evaluating local backlash
+                        {simulationStep > 4 ? "✔" : simulationStep === 4 ? "⚡" : "○"} [4/4] Analyzing social and civil impact...
                       </div>
                     </div>
                   </div>
@@ -603,7 +615,7 @@ export default function UnifiedWorkspace({
                     <div className="max-h-40 overflow-y-auto pr-1 text-[9px] text-neutral-300 custom-scrollbar leading-normal">
                       {simTab === "summary" && (
                         <div>
-                          <div className="text-[8px] text-purple-400 font-bold uppercase mb-1">PROJECTION SUMMARY</div>
+                          <div className="text-[8px] text-purple-400 font-bold uppercase mb-1">SIMULATION SUMMARY</div>
                           <p>{simulationResult.summary}</p>
                         </div>
                       )}
@@ -611,7 +623,7 @@ export default function UnifiedWorkspace({
                       {simTab === "military" && (
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center text-[8px] bg-black/40 p-1 font-bold">
-                            <span className="text-neutral-500 uppercase">SECURITY STATE</span>
+                            <span className="text-neutral-500 uppercase">SECURITY IMPACT</span>
                             <span className="text-purple-400">{simulationResult.military.status}</span>
                           </div>
                           <div className="whitespace-pre-line leading-relaxed text-[8.5px] text-neutral-200">
@@ -624,7 +636,7 @@ export default function UnifiedWorkspace({
                       {simTab === "economic" && (
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center text-[8px] bg-black/40 p-1 font-bold">
-                            <span className="text-neutral-500 uppercase">TRADE IMPACT</span>
+                            <span className="text-neutral-500 uppercase">ECONOMIC IMPACT</span>
                             <span className="text-purple-400">{simulationResult.economic.status}</span>
                           </div>
                           <div className="whitespace-pre-line leading-relaxed text-[8.5px] text-neutral-200">
@@ -646,7 +658,7 @@ export default function UnifiedWorkspace({
                       {simTab === "social" && (
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center text-[8px] bg-black/40 p-1 font-bold">
-                            <span className="text-neutral-500 uppercase">CIVIL STABILITY</span>
+                            <span className="text-neutral-500 uppercase">CIVIL IMPACT</span>
                             <span className="text-purple-400">{simulationResult.social.status}</span>
                           </div>
                           <div className="whitespace-pre-line leading-relaxed text-[8.5px] text-neutral-200">
@@ -669,7 +681,7 @@ export default function UnifiedWorkspace({
             )}
           </div>
 
-          {/* ── SECTION 6: CLASSIFIED INCIDENT WARNING LOGS ── */}
+          {/* ── SECTION 6: INCIDENT ALERTS LOG ── */}
           <div className="border border-white/5 bg-void/40 p-2">
             <div 
               onClick={() => setExpandHistory(!expandHistory)}
@@ -677,13 +689,17 @@ export default function UnifiedWorkspace({
             >
               <div className="flex items-center gap-1.5">
                 <Radio size={12} className="text-plasma-pink animate-pulse" />
-                <span>Classified Warning Log</span>
+                <span>Incident Alerts Log</span>
               </div>
               {expandHistory ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </div>
 
             {expandHistory && (
-              <div className="flex flex-col gap-2">
+              <div className="relative flex flex-col gap-2 min-h-[150px]">
+                {!user && (
+                  <RestrictedAccessOverlay moduleName="Incident Alerts Log" compact />
+                )}
+
                 <div className="flex justify-between items-center bg-black/40 p-1 border border-white/5">
                   <span className="text-[8px] text-neutral-500">RADAR FREQ: 9.6 GHz</span>
                   <button 
@@ -691,7 +707,7 @@ export default function UnifiedWorkspace({
                     disabled={isScanningRadar}
                     className="text-[8px] text-plasma-pink font-bold hover:underline uppercase disabled:text-neutral-500"
                   >
-                    {isScanningRadar ? "SWEEPING..." : "[ FORCE RADAR SWEEP ]"}
+                    {isScanningRadar ? "Scanning..." : "[ Scan for Alerts ]"}
                   </button>
                 </div>
 

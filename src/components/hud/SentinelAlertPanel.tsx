@@ -63,8 +63,8 @@ export default function SentinelAlertPanel({
       new CustomEvent("add-ticker-event", {
         detail: {
           message: force 
-            ? "SENTINEL-X :: FORCING PROACTIVE GLOBAL SCAN BYPASSING COOLDOWN..."
-            : "SENTINEL-X :: Initializing automated proactive global reconnaissance sweep...",
+            ? "GLOBAL INCIDENT RADAR :: Forcing global scan..."
+            : "GLOBAL INCIDENT RADAR :: Scanning for alerts...",
           type: "system"
         }
       })
@@ -206,7 +206,7 @@ export default function SentinelAlertPanel({
         <GlassPanel padding="sm" className="bg-black/70 py-1.5 px-3">
           <div className="flex items-center gap-2.5 font-mono text-[9px]">
             <Terminal size={11} className={`${isScanning ? "text-cyan-400 animate-spin" : "text-neutral-400"}`} />
-            <span className="text-neutral-300">SENTINEL RADAR:</span>
+            <span className="text-neutral-300">INCIDENT SWEEPER:</span>
             <button
               onClick={() => triggerSweep(true)}
               disabled={isScanning}
@@ -214,7 +214,7 @@ export default function SentinelAlertPanel({
                 isScanning ? "text-cyan-400 animate-pulse" : "text-plasma-pink hover:text-plasma-pink/80"
               }`}
             >
-              {isScanning ? "SCANNING SECTORS..." : "FORCE SENTINEL SWEEP"}
+              {isScanning ? "SCANNING SECTORS..." : "SCAN SECTORS"}
             </button>
           </div>
         </GlassPanel>
@@ -226,7 +226,7 @@ export default function SentinelAlertPanel({
           <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5">
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-plasma-pink animate-pulse"></div>
-              <span className="text-[10px] font-bold text-white tracking-wider">CLASSIFIED WARNING LOG</span>
+              <span className="text-[10px] font-bold text-white tracking-wider">Incident Alerts Log</span>
             </div>
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
@@ -240,7 +240,7 @@ export default function SentinelAlertPanel({
             <div className="max-h-56 overflow-y-auto pr-1 flex flex-col gap-1.5 scrollbar-thin scrollbar-thumb-neutral-800">
               {history.length === 0 ? (
                 <div className="text-[8px] text-neutral-500 py-4 text-center italic">
-                  NO ACTIVE WAR CABLES IN LOG
+                  NO ACTIVE ALERTS IN LOG
                 </div>
               ) : (
                 history.map((alert) => {
@@ -305,7 +305,7 @@ export default function SentinelAlertPanel({
                   <div className="flex items-center gap-2">
                     <ShieldAlert size={14} className="text-plasma-pink animate-pulse" />
                     <h3 className="text-[11px] font-bold text-plasma-pink uppercase tracking-widest">
-                      CLASSIFIED OSINT BRIEFING
+                      INCIDENT DETAILS
                     </h3>
                   </div>
                   <span className="text-[9px] text-neutral-500">{activeAlert.id}</span>
@@ -346,7 +346,7 @@ export default function SentinelAlertPanel({
                     variant="danger" 
                     className="py-1 px-4 text-[9px]"
                   >
-                    ACKNOWLEDGE & CLOSE
+                    CLOSE
                   </GlowButton>
                 </div>
               </div>

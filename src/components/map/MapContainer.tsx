@@ -689,7 +689,6 @@ export default function MapContainer() {
         activeMode={activeMode}
         isConnected={isAuthenticated}
         activeSubMode={subMode}
-        onChangeSubMode={setSubMode}
         isPerformanceMode={isPerformanceMode}
         onTogglePerformanceMode={() => setIsPerformanceMode(!isPerformanceMode)}
       />

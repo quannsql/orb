@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { getSession, checkCORS, rateLimitByIP, rateLimitByUser } from "@/lib/auth-api";
 
 const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey || "");
@@ -10,6 +11,35 @@ const AI_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function POST(req: Request) {
   try {
+    // 1. CORS validation
+    if (!checkCORS(req)) {
+      return NextResponse.json({ error: "Access denied: CORS validation failed" }, { status: 403 });
+    }
+
+    // 2. Authentication check
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: "Access denied: Authentication required" }, { status: 401 });
+    }
+
+    // 3. IP Rate Limiting Check
+    const isIPAllowed = await rateLimitByIP(req, 10, 60);
+    if (!isIPAllowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Maximum 10 scans per minute." },
+        { status: 429 }
+      );
+    }
+
+    // 4. User Rate Limiting Check
+    const isUserAllowed = await rateLimitByUser(user.email, 10, 60);
+    if (!isUserAllowed) {
+      return NextResponse.json(
+        { error: "Operator rate limit exceeded. Maximum 10 scans per minute." },
+        { status: 429 }
+      );
+    }
+
     const { flights, bounds } = await req.json();
 
     if (!apiKey || apiKey === "your_gemini_api_key_here") {

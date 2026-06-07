@@ -29,10 +29,13 @@ export default function GlowButton({
   active = false,
   size = "md",
   id,
+  type = "button",
+  ...props
 }: GlowButtonProps) {
   return (
     <button
       id={id}
+      type={type}
       onClick={onClick}
       disabled={disabled || loading}
       className={`
@@ -43,6 +46,7 @@ export default function GlowButton({
         ${className}
         inline-flex items-center justify-center gap-2
       `}
+      {...props}
     >
       {loading && <span className="cyber-spinner" />}
       {children}

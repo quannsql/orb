@@ -5,6 +5,8 @@ import GlassPanel from "@/components/ui/GlassPanel";
 import GlowButton from "@/components/ui/GlowButton";
 import type { SpectralMode } from "@/types/sentinel";
 import { Bot, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import RestrictedAccessOverlay from "@/components/ui/RestrictedAccessOverlay";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,6 +21,7 @@ interface GeoChatPanelProps {
 }
 
 export default function GeoChatPanel({ onFlyTo, onSetMode, onSetDate, className = "" }: GeoChatPanelProps) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "ORB Oracle online. Enter coordinates or instructions." }
@@ -115,6 +118,10 @@ export default function GeoChatPanel({ onFlyTo, onSetMode, onSetDate, className 
           <X size={12} />
         </button>
       </div>
+      
+      {!user && (
+        <RestrictedAccessOverlay moduleName="ORB ORACLE CHAT" className="rounded-t-none" />
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-3 font-mono text-xs">
         {messages.map((msg, i) => (

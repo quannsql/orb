@@ -158,14 +158,14 @@ export default function StatsPanel({ stats, onClose }: StatsPanelProps) {
                 variant="white"
                 className="w-full text-[10px] py-1.5"
               >
-                [ GENERATE OSINT REPORT ]
+                [ GENERATE REPORT ]
               </GlowButton>
               <GlowButton 
                 onClick={() => document.dispatchEvent(new CustomEvent("run-anomaly", { detail: stats }))}
                 variant="ghost"
                 className="w-full text-[10px] py-1.5 text-neutral-400 hover:text-white"
               >
-                [ RUN ANOMALY SCAN ]
+                [ SCAN FOR ANOMALIES ]
               </GlowButton>
             </div>
           </>

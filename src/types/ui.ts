@@ -11,7 +11,7 @@ export interface GlassPanelProps {
   id?: string;
 }
 
-export interface GlowButtonProps {
+export interface GlowButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: ButtonVariant;
   onClick?: () => void;

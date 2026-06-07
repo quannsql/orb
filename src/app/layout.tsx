@@ -37,6 +37,10 @@ export const metadata: Metadata = {
   ],
 };
 
+import { AuthProvider } from "@/context/AuthContext";
+import LoginModal from "@/components/ui/LoginModal";
+import Script from "next/script";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -48,7 +52,11 @@ export default function RootLayout({
       className={`${inter.variable} ${googleSansCode.variable} h-full`}
     >
       <body className="min-h-full bg-void text-neutral-100 font-sans antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+          <LoginModal />
+        </AuthProvider>
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       </body>
     </html>
   );
