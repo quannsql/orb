@@ -22,6 +22,7 @@ export default function MatrixText({
   className = "",
   continuous = false,
   onComplete,
+  disabledAnimation = false,
 }: MatrixTextProps) {
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
@@ -29,6 +30,13 @@ export default function MatrixText({
   const textRef = useRef(text);
 
   useEffect(() => {
+    if (disabledAnimation) {
+      setDisplayedText(text);
+      setShowCursor(false);
+      onComplete?.();
+      return;
+    }
+
     textRef.current = text;
     indexRef.current = 0;
     setDisplayedText("");
@@ -55,7 +63,7 @@ export default function MatrixText({
     }, speed);
 
     return () => clearInterval(timer);
-  }, [text, speed, continuous, onComplete]);
+  }, [text, speed, continuous, onComplete, disabledAnimation]);
 
   return (
     <span className={`matrix-text ${COLOR_CLASSES[color]} ${className}`}>

@@ -18,7 +18,8 @@ interface MaritimeState {
 export function useMaritimeMap(
   mapRef: React.RefObject<mapboxgl.Map | null>,
   viewport: ViewportState,
-  isActive: boolean
+  isActive: boolean,
+  isPerformanceMode = false
 ) {
   const [ships, setShips] = useState<Map<number, MaritimeState>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
@@ -282,7 +283,9 @@ export function useMaritimeMap(
       img2.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1"><path d="M3,12L12,2L21,12L19,22H5L3,12Z" /></svg>');
     }
 
-    const shipArray = Array.from(ships.values()).filter(s => s.latitude !== 0 && s.longitude !== 0);
+    const shipArray = Array.from(ships.values())
+      .filter(s => s.latitude !== 0 && s.longitude !== 0)
+      .filter(s => !isPerformanceMode || s.is_military);
 
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
@@ -488,7 +491,7 @@ export function useMaritimeMap(
       // We don't cleanup here immediately because useEffect triggers on every update. 
       // Cleanup is handled when isActive becomes false.
     };
-  }, [mapRef, ships, isActive]);
+  }, [mapRef, ships, isActive, isPerformanceMode]);
 
   // Clean up layer on deactivate
   useEffect(() => {

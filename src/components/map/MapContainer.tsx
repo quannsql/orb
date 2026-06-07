@@ -29,6 +29,19 @@ import { Layers, X, Target } from "lucide-react";
 
 export default function MapContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Performance Mode (Low-GPU Mode)
+  const [isPerformanceMode, setIsPerformanceMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("orb:performance_mode") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("orb:performance_mode", String(isPerformanceMode));
+  }, [isPerformanceMode]);
+
   const {
     mapRef,
     isLoaded,
@@ -39,12 +52,23 @@ export default function MapContainer() {
     toggle3D,
     resetBearing,
     flyTo,
-  } = useMapbox(containerRef);
+  } = useMapbox(containerRef, isPerformanceMode);
 
   const { isAuthenticated } = useSentinelAuth();
   const { setLayer, removeLayer, setOpacity } = useSentinelLayers(mapRef);
   const timeTravel = useTimeTravel();
   const { stats, analyzePolygon, clearAnalysis } = usePolygonAnalysis();
+
+  // Toggle Mapbox Projection between Globe (3D) and Mercator (2D)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoaded) return;
+    try {
+      map.setProjection(isPerformanceMode ? { name: "mercator" } : { name: "globe" });
+    } catch (err) {
+      console.warn("Error changing map projection:", err);
+    }
+  }, [isPerformanceMode, isLoaded, mapRef]);
 
   // Core Sidebar Navigation & Autopilot
   const [subMode, setSubMode] = useState<"satcom" | "osint" | "butterfly">("satcom");
@@ -58,8 +82,18 @@ export default function MapContainer() {
   // OSINT Targets Hook Integration
   const [scanAviation, setScanAviation] = useState(true);
   const [scanMaritime, setScanMaritime] = useState(true);
-  const { flights, isScanning: isScanningAviation, lastScanTime } = useOsintMap(mapRef, viewport, isLoaded && scanAviation);
-  const { ships, isConnected: isMaritimeScanning } = useMaritimeMap(mapRef, viewport, isLoaded && scanMaritime);
+  const { flights, isScanning: isScanningAviation, lastScanTime } = useOsintMap(
+    mapRef,
+    viewport,
+    isLoaded && scanAviation,
+    isPerformanceMode ? 45000 : 15000
+  );
+  const { ships, isConnected: isMaritimeScanning } = useMaritimeMap(
+    mapRef,
+    viewport,
+    isLoaded && scanMaritime,
+    isPerformanceMode
+  );
 
   // AI Analysis & Briefing states
   const [threatAnalysisResult, setThreatAnalysisResult] = useState<any>(null);
@@ -656,6 +690,8 @@ export default function MapContainer() {
         isConnected={isAuthenticated}
         activeSubMode={subMode}
         onChangeSubMode={setSubMode}
+        isPerformanceMode={isPerformanceMode}
+        onTogglePerformanceMode={() => setIsPerformanceMode(!isPerformanceMode)}
       />
 
       {/* Top-right: Event Ticker */}

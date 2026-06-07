@@ -184,7 +184,7 @@ export default function UnifiedWorkspace({
 
   return (
     <div 
-      className="fixed left-4 right-4 md:right-auto top-14 bottom-12 z-30 w-auto md:w-[350px] max-w-[calc(100%-32px)] flex flex-col font-mono text-xs select-none pointer-events-auto transition-all duration-300"
+      className="fixed left-4 right-4 md:right-auto top-14 bottom-12 z-30 w-auto md:w-[350px] max-w-[calc(100%-32px)] flex flex-col font-mono text-xs select-text pointer-events-auto transition-all duration-300"
       id="unified-workspace"
     >
       <GlassPanel 

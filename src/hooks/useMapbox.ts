@@ -10,7 +10,10 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 /**
  * Custom hook for managing the Mapbox GL JS map instance.
  */
-export function useMapbox(containerRef: React.RefObject<HTMLDivElement | null>) {
+export function useMapbox(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  isPerformanceMode = false
+) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [viewport, setViewport] = useState<ViewportState>({
@@ -22,6 +25,11 @@ export function useMapbox(containerRef: React.RefObject<HTMLDivElement | null>) 
   const [cursorLngLat, setCursorLngLat] = useState<[number, number] | null>(
     null
   );
+
+  const isPerfRef = useRef(isPerformanceMode);
+  useEffect(() => {
+    isPerfRef.current = isPerformanceMode;
+  }, [isPerformanceMode]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -177,20 +185,21 @@ export function useMapbox(containerRef: React.RefObject<HTMLDivElement | null>) 
     const handlePitchChange = () => {
       const pitch = map.getPitch();
       const is3D = pitch > 0;
-      if (is3D === was3D) return;
-      was3D = is3D;
+      const shouldShow3D = is3D && !isPerfRef.current;
+      if (shouldShow3D === was3D) return;
+      was3D = shouldShow3D;
 
       try {
-        (map as any).setConfigProperty("basemap", "show3dObjects", is3D);
-        (map as any).setConfigProperty("basemap", "show3dBuildings", is3D);
-        (map as any).setConfigProperty("basemap", "show3dTrees", is3D);
-        (map as any).setConfigProperty("basemap", "show3dLandmarks", is3D);
+        (map as any).setConfigProperty("basemap", "show3dObjects", shouldShow3D);
+        (map as any).setConfigProperty("basemap", "show3dBuildings", shouldShow3D);
+        (map as any).setConfigProperty("basemap", "show3dTrees", shouldShow3D);
+        (map as any).setConfigProperty("basemap", "show3dLandmarks", shouldShow3D);
 
         if (map.getLayer("mapbox-satellite-layer")) {
           map.setLayoutProperty(
             "mapbox-satellite-layer",
             "visibility",
-            is3D ? "none" : "visible"
+            shouldShow3D ? "none" : "visible"
           );
         }
 
@@ -198,7 +207,7 @@ export function useMapbox(containerRef: React.RefObject<HTMLDivElement | null>) 
           map.setLayoutProperty(
             "sentinel-layer",
             "visibility",
-            is3D ? "none" : "visible"
+            shouldShow3D ? "none" : "visible"
           );
         }
       } catch (err) {

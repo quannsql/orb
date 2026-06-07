@@ -30,7 +30,8 @@ interface FlightState {
 export function useOsintMap(
   mapRef: React.RefObject<mapboxgl.Map | null>,
   viewport: ViewportState,
-  isActive: boolean
+  isActive: boolean,
+  pollIntervalMs = 15000
 ) {
   const [flights, setFlights] = useState<FlightState[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -256,7 +257,7 @@ export function useOsintMap(
       }
       
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = setInterval(fetchFlights, 15000); // 15 seconds
+      pollIntervalRef.current = setInterval(fetchFlights, pollIntervalMs); // use pollIntervalMs
     } else {
       isFirstLoadRef.current = true;
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -279,7 +280,7 @@ export function useOsintMap(
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
     };
-  }, [isActive, fetchFlights, mapRef, viewport]);
+  }, [isActive, fetchFlights, mapRef, viewport, pollIntervalMs]);
 
   return { flights, isScanning, lastScanTime, forceScan: fetchFlights };
 }

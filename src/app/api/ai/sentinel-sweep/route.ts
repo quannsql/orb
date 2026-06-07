@@ -3,7 +3,11 @@ import { queryGrok } from "@/lib/grok";
 import { cacheGet, cacheSet, checkRateLimit } from "@/lib/redis";
 import { initBackgroundWorker } from "@/lib/backgroundWorker";
 
-const DEFAULT_HANDLES = ["visegrad24", "warsurv", "KobeissiLetter"];
+const DEFAULT_HANDLES = [
+  "visegrad24",
+  "warsurv",
+  "KobeissiLetter",
+];
 
 async function fetchApifyTweets(): Promise<string[]> {
   const token = process.env.APIFY_API_TOKEN;
@@ -25,7 +29,9 @@ async function fetchApifyTweets(): Promise<string[]> {
       },
       body: JSON.stringify({
         twitterHandles: DEFAULT_HANDLES,
-        tweetsDesired: 2,
+        maxItems: 10,
+        sort: "Latest",
+        tweetLanguage: "en",
         addParentTweets: false
       }),
       signal: controller.signal
@@ -87,43 +93,48 @@ export async function POST(request: Request) {
     const historyKey = "sentinel:alerts:history";
     const cooldownKey = "sentinel:sweep:cooldown";
 
+    const recentAlerts = await cacheGet<any[]>(historyKey) || [];
+    const recentHotspots = Array.from(new Set(recentAlerts.map((h: any) => h.hotspot).filter(Boolean))).slice(0, 5);
+
     // 3. Cooldown check (only if not forced)
     if (!force) {
       const cooldownActive = await cacheGet(cooldownKey);
       if (cooldownActive) {
         console.log(`[Sentinel AI] Cooldown active, serving latest cached alert from history`);
-        const history = await cacheGet<any[]>(historyKey);
-        if (history && history.length > 0) {
-          return NextResponse.json({ ...history[0], cached: true });
+        if (recentAlerts && recentAlerts.length > 0) {
+          return NextResponse.json({ ...recentAlerts[0], cached: true });
         }
       }
     }
 
     // 4. Fetch real tweets if token is available
     const tweets = await fetchApifyTweets();
-    let tweetsContext = "";
+
+    let promptDirective = "";
     if (tweets.length > 0) {
-      tweetsContext = `Here are the latest real-time OSINT tweets collected from key military/economic accounts:\n${tweets.join("\n")}\n\n`;
+      promptDirective = `
+CRITICAL DIRECTIVE:
+1. You MUST analyze the following real-time OSINT tweets collected from key military/economic accounts:
+${tweets.map(t => `- ${t}`).join("\n")}
+2. Select the most critical ongoing geopolitical, military, or supply chain anomaly described in these tweets.
+3. Extract the hotspot/location, the category/type of crisis, the tactical situation, and the supply chain/geopolitical impact directly from the tweets.
+4. You MUST research your internal knowledge for the actual coordinate location (latitude and longitude) of the hotspot/event mentioned in the tweets and return it.
+5. You MUST NOT select any of these recently reported hotspots to avoid redundancy: ${JSON.stringify(recentHotspots)}. Choose another topic/location from the tweets if there is a conflict.
+`;
+    } else {
+      promptDirective = `
+CRITICAL DIRECTIVE:
+1. Since no live OSINT tweets are currently available, you MUST identify an ongoing or recent (2025/2026) REAL-WORLD geopolitical conflict, military standoff, border tension, or critical supply chain disruption globally.
+2. Select a highly dynamic, realistic, and specific hotspot/location anywhere on Earth. Do NOT restrict yourself to a fixed list of common locations. It can be any region, country border, strait, ocean, canal, or port (e.g. Red Sea, North Sea, Baltic borders, South America borders, Aegean Sea, Cyprus, Arctic Passage, Gulf of Aden, Panama Canal, DMZ, Gibraltar, Suez Canal, Strait of Hormuz, Taiwan Strait, South China Sea, etc.), representing a genuine global flashpoint.
+3. You MUST NOT select any of these recently reported hotspots to avoid redundancy: ${JSON.stringify(recentHotspots)}. Choose a completely different region/country.
+4. You MUST research your internal knowledge for the actual coordinate location (latitude and longitude) of this event/hotspot and return it.
+`;
     }
 
     const systemPrompt = `You are the central processor for ORB Autonomous Proactive Sentinels.
 Analyze the following source intelligence and detect any critical geopolitical, economic, or military anomaly.
 
-${tweetsContext}If real-time tweets are available above, prioritize analyzing them to see if a real-world geopolitical, military, or supply chain crisis is unfolding, and extract the exact coordinates of the event.
-
-If no tweets are available, or if the tweets do not describe a major ongoing crisis, identify a REAL-WORLD geopolitical conflict, military standoff, or critical supply chain disruption currently occurring or very recent (2025/2026) globally.
-Examples of areas to consider:
-- Bab-el-Mandeb Strait / Red Sea (shipping drone attacks, naval patrols)
-- Strait of Hormuz (tanker seizures, naval standoffs)
-- South China Sea (territorial disputes, vessel collisions)
-- Suwalki Gap (military troop build-up)
-- Taiwan Strait (air/naval blockade drills)
-- Arctic passage (Russian/NATO shipping disputes)
-- Panama Canal Sector (water levels/drought shipping collapse)
-- Ukraine-Russia border regions (drone incursions, troop deployments)
-- Korea Peninsula / DMZ (military maneuvers)
-
-Select ONE real-world crisis area on Earth. You must research your internal knowledge for the actual latitude and longitude coordinates of this location.
+${promptDirective}
 
 Generate a realistic, professional, and slightly alarming military/economic analyst report using the grok-4.3 model.
 Focus on:

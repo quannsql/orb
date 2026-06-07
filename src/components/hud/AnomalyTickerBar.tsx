@@ -55,7 +55,10 @@ export default function AnomalyTickerBar({ alerts, onAlertClick }: AnomalyTicker
       {/* Scrolling Content */}
       <div className="relative w-full h-full flex items-center overflow-hidden select-none">
         <div 
-          className="flex items-center gap-12 whitespace-nowrap animate-[ticker-scroll_45s_linear_infinite] hover:[animation-play-state:paused] cursor-pointer"
+          className="flex items-center gap-12 whitespace-nowrap hover:[animation-play-state:paused] cursor-pointer"
+          style={{
+            animation: `ticker-scroll ${Math.max(60, alerts.length * 15)}s linear infinite`
+          }}
         >
           {scrollItems.map((alert, idx) => (
             <div

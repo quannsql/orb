@@ -30,6 +30,7 @@ export interface MatrixTextProps {
   className?: string;
   continuous?: boolean;
   onComplete?: () => void;
+  disabledAnimation?: boolean;
 }
 
 export interface CyberSliderProps {

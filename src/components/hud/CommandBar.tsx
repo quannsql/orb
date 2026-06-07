@@ -5,6 +5,7 @@ import type { SpectralMode } from "@/types/sentinel";
 import DataLabel from "@/components/ui/DataLabel";
 import MatrixText from "@/components/ui/MatrixText";
 import { formatDecimal } from "@/lib/utils";
+import { Zap, ZapOff } from "lucide-react";
 
 interface CommandBarProps {
   viewport: ViewportState;
@@ -13,6 +14,8 @@ interface CommandBarProps {
   isConnected: boolean;
   activeSubMode: "satcom" | "osint" | "butterfly";
   onChangeSubMode: (mode: "satcom" | "osint" | "butterfly") => void;
+  isPerformanceMode: boolean;
+  onTogglePerformanceMode: () => void;
 }
 
 /**
@@ -25,6 +28,8 @@ export default function CommandBar({
   isConnected,
   activeSubMode,
   onChangeSubMode,
+  isPerformanceMode,
+  onTogglePerformanceMode,
 }: CommandBarProps) {
   return (
     <div
@@ -159,21 +164,46 @@ export default function CommandBar({
         </div>
       </div>
 
-      {/* Right section: Connection status */}
-      <div className="flex items-center gap-1.5">
-        <div
-          className={`w-1.5 h-1.5 rounded-full ${isConnected
-            ? "bg-matrix-green shadow-[0_0_6px_rgba(0,255,65,0.6)]"
-            : "bg-warning-amber shadow-[0_0_6px_rgba(255,190,11,0.6)]"
-            }`}
-        />
-        <span className="text-[9px] font-mono text-neutral-400 uppercase">
-          {isConnected ? (
-            <MatrixText text="LINK" speed={15} color="green" />
+      {/* Right section: Performance & Connection status */}
+      <div className="flex items-center gap-4">
+        {/* Performance Mode Toggle Button */}
+        <button
+          onClick={onTogglePerformanceMode}
+          title={isPerformanceMode ? "Switch to High Quality Mode (Enable 3D & Globe)" : "Switch to Performance Mode (Disable 3D & Globe)"}
+          className={`flex items-center gap-1.5 px-2 py-0.5 border font-mono text-[9px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+            isPerformanceMode
+              ? "bg-plasma-pink/10 border-plasma-pink text-plasma-pink shadow-[0_0_8px_rgba(255,0,85,0.2)]"
+              : "bg-black/40 border-neutral-600/50 text-neutral-400 hover:text-neutral-200 hover:border-neutral-400/50"
+          }`}
+        >
+          {isPerformanceMode ? (
+            <>
+              <ZapOff size={10} className="animate-pulse" />
+              <span>Low-GPU</span>
+            </>
           ) : (
-            "OFFLINE"
+            <>
+              <Zap size={10} />
+              <span>HQ Mode</span>
+            </>
           )}
-        </span>
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${isConnected
+              ? "bg-matrix-green shadow-[0_0_6px_rgba(0,255,65,0.6)]"
+              : "bg-warning-amber shadow-[0_0_6px_rgba(255,190,11,0.6)]"
+              }`}
+          />
+          <span className="text-[9px] font-mono text-neutral-400 uppercase">
+            {isConnected ? (
+              <MatrixText text="LINK" speed={15} color="green" disabledAnimation={isPerformanceMode} />
+            ) : (
+              "OFFLINE"
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );
