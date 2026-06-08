@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { cacheGet, cacheSet } from "@/lib/redis";
 import { queryGrok } from "@/lib/grok";
 
+export const maxDuration = 60; // Allow function to run up to 60 seconds (Vercel Hobby max)
+
 export async function GET(request: Request) {
   try {
     // Basic security check for Vercel Cron
