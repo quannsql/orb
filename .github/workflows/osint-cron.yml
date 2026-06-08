@@ -1,0 +1,20 @@
+name: ORB Sentinel Background Sweep
+
+on:
+  schedule:
+    # Runs every 90 minutes
+    # Standard cron doesn't support exactly 90 mins easily, so we use every 2 hours as a safe baseline
+    # Or to hit ~90 mins we can run at specific hours. 
+    # For now, let's trigger every 2 hours:
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel OSINT Sweep API
+        run: |
+          curl -X GET "https://orb-rust.vercel.app/api/cron/sweep" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          --max-time 120
