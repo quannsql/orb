@@ -22,9 +22,10 @@ import DrawTools from "@/components/map/DrawTools";
 import GeoChatPanel from "@/components/hud/GeoChatPanel";
 import UnifiedWorkspace from "@/components/hud/UnifiedWorkspace";
 import AnomalyTickerBar from "@/components/hud/AnomalyTickerBar";
+import GlassPanel from "@/components/ui/GlassPanel";
+import GlowButton from "@/components/ui/GlowButton";
 import * as turf from "@turf/turf";
 import mapboxgl from "mapbox-gl";
-import GlowButton from "@/components/ui/GlowButton";
 import { Layers, X, Target } from "lucide-react";
 
 export default function MapContainer() {
@@ -71,9 +72,16 @@ export default function MapContainer() {
   }, [isPerformanceMode, isLoaded, mapRef]);
 
   // Core Sidebar Navigation & Autopilot
-  const [subMode, setSubMode] = useState<"satcom" | "osint" | "butterfly">("satcom");
+  const [subMode, setSubMode] = useState<"satcom" | "osint" | "butterfly" | "gaia">("satcom");
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
   const [isAutopilot, setIsAutopilot] = useState(true);
+
+  // Gaia Shield States
+  const [disasters, setDisasters] = useState<any[]>([]);
+  const [isScanningDisasters, setIsScanningDisasters] = useState(false);
+  const [activeDisaster, setActiveDisaster] = useState<any | null>(null);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
+  const activeDisasterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   // Sentinel Imagery
   const [activeMode, setActiveMode] = useState<SpectralMode | null>(null);
@@ -114,6 +122,30 @@ export default function MapContainer() {
   const butterflyMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const activeHazardMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
+  const fetchDisasters = useCallback(async () => {
+    if (isScanningDisasters) return;
+    setIsScanningDisasters(true);
+    try {
+      const res = await fetch("/api/disasters");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setDisasters(data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load disasters:", err);
+    } finally {
+      setIsScanningDisasters(false);
+    }
+  }, [isScanningDisasters]);
+
+  useEffect(() => {
+    fetchDisasters();
+    const interval = setInterval(fetchDisasters, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Spectral mode update handler
   const handleModeChange = useCallback(
     (mode: SpectralMode | null) => {
@@ -146,7 +178,7 @@ export default function MapContainer() {
     try {
       if (map.getLayer("mapbox-satellite-layer")) {
         const is3D = viewport.pitch > 0;
-        const isDarkMap = subMode === "osint" || subMode === "butterfly";
+        const isDarkMap = subMode === "osint" || subMode === "butterfly" || subMode === "gaia";
         map.setLayoutProperty(
           "mapbox-satellite-layer",
           "visibility",
@@ -668,6 +700,87 @@ export default function MapContainer() {
     };
   }, [hazardMarkers, isLoaded, mapRef]);
 
+  // ─── Gaia Shield Disaster Pins ───
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoaded) return;
+
+    const cleanupAll = () => {
+      Object.keys(activeDisasterMarkersRef.current).forEach((id) => {
+        activeDisasterMarkersRef.current[id].remove();
+      });
+      activeDisasterMarkersRef.current = {};
+    };
+
+    if (subMode !== "gaia") {
+      cleanupAll();
+      return;
+    }
+
+    const currentIds = new Set(disasters.map((d) => d.id));
+    Object.keys(activeDisasterMarkersRef.current).forEach((id) => {
+      if (!currentIds.has(id)) {
+        activeDisasterMarkersRef.current[id].remove();
+        delete activeDisasterMarkersRef.current[id];
+      }
+    });
+
+    disasters.forEach((d) => {
+      if (!activeDisasterMarkersRef.current[d.id]) {
+        const el = document.createElement("div");
+        el.className = "disaster-marker";
+        
+        let markerHtml = "";
+        if (d.type === "EARTHQUAKE") {
+          const color = d.severity === "CRITICAL" ? "rgba(255, 0, 110, 0.9)" : d.severity === "HIGH" ? "rgba(255, 190, 11, 0.9)" : "rgba(0, 240, 255, 0.9)";
+          const size = d.magnitude ? Math.max(16, d.magnitude * 4.5) : 18;
+          markerHtml = `
+            <div class="relative flex items-center justify-center" style="width: ${size}px; height: ${size}px;">
+              <div class="absolute w-full h-full rounded-full seismic-ring" style="border: 2px solid ${color}; background-color: ${color.replace("0.9", "0.2")};"></div>
+              <div class="w-3.5 h-3.5 rounded-full bg-white border-2" style="border-color: ${color}; box-shadow: 0 0 10px ${color};"></div>
+            </div>
+          `;
+        } else {
+          let icon = "⚠";
+          let color = "rgba(255, 190, 11, 0.9)";
+          if (d.type === "CYCLONE") {
+            icon = "🌀";
+            color = "rgba(0, 240, 255, 0.9)";
+          } else if (d.type === "VOLCANO") {
+            icon = "🌋";
+            color = "rgba(255, 0, 110, 0.9)";
+          } else if (d.type === "FLOOD") {
+            icon = "🌊";
+            color = "rgba(0, 128, 255, 0.9)";
+          }
+          markerHtml = `
+            <div class="relative flex items-center justify-center w-8 h-8 rounded-full bg-black/80 border border-white/20 shadow-lg cursor-pointer">
+              <span class="text-xs" style="color: ${color}; filter: drop-shadow(0 0 4px ${color});">${icon}</span>
+            </div>
+          `;
+        }
+        
+        el.innerHTML = markerHtml;
+
+        el.addEventListener("click", () => {
+          setActiveDisaster(d);
+          flyTo(d.lng, d.lat, 6);
+          setButterflyClickedLatLng({ lng: d.lng, lat: d.lat });
+        });
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([d.lng, d.lat])
+          .addTo(map);
+
+        activeDisasterMarkersRef.current[d.id] = marker;
+      }
+    });
+
+    return () => {
+      // Clean up when subMode changes or component unmounts
+    };
+  }, [disasters, subMode, isLoaded, mapRef]);
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-void" id="map-root">
       {/* Map canvas */}
@@ -697,6 +810,94 @@ export default function MapContainer() {
       <div className="hidden md:block">
         <EventTicker />
       </div>
+
+      {/* Gaia Shield Legend */}
+      {subMode === "gaia" && isLegendOpen && (
+        <div className="fixed top-[260px] right-4 z-20 w-80 slide-in-right" id="gaia-legend">
+          <GlassPanel padding="sm" glowColor="amber" className="bg-black/90 rounded-none border border-amber-500/20">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-[rgba(255,190,11,0.15)]">
+              <span className="text-[9px] font-mono text-amber-400 uppercase tracking-widest font-extrabold">
+                ◈ Gaia Shield Legend
+              </span>
+              <button 
+                onClick={() => setIsLegendOpen(false)} 
+                className="text-[8.5px] text-neutral-500 hover:text-white uppercase ml-auto cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Legend grid/list */}
+            <div className="flex flex-col gap-2 font-mono text-[8.5px]">
+              {/* Seismic Warnings */}
+              <div className="border-b border-white/5 pb-2 mb-1">
+                <span className="text-neutral-500 text-[8px] font-bold uppercase block mb-1.5">Seismic Warnings (USGS)</span>
+                <div className="flex flex-col gap-1.5 pl-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex items-center justify-center w-4 h-4">
+                      <div className="absolute w-full h-full rounded-full border border-plasma-pink bg-plasma-pink/20 animate-ping"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-plasma-pink"></div>
+                    </div>
+                    <span className="text-neutral-200">Mag &gt;= 6.0 (Critical)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex items-center justify-center w-4 h-4">
+                      <div className="absolute w-full h-full rounded-full border border-amber-500 bg-amber-500/20"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-amber-500"></div>
+                    </div>
+                    <span className="text-neutral-200">Mag 5.0 - 5.9 (High)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex items-center justify-center w-4 h-4">
+                      <div className="absolute w-full h-full rounded-full border border-cyan-400 bg-cyan-400/20"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-cyan-400"></div>
+                    </div>
+                    <span className="text-neutral-200">Mag 4.5 - 4.9 (Elevated)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meteorological & Ecological Warnings */}
+              <div>
+                <span className="text-neutral-500 text-[8px] font-bold uppercase block mb-1.5">Ecological Warnings (GDACS)</span>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pl-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">🌀</span>
+                    <span className="text-neutral-200">Cyclone/Storm</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">🌋</span>
+                    <span className="text-neutral-200">Volcano Alert</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">🌊</span>
+                    <span className="text-neutral-200">Flood Threat</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-amber-500 filter drop-shadow-[0_0_2px_rgba(255,190,11,0.5)]">⚠</span>
+                    <span className="text-neutral-200">Drought/Other</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
+
+      {/* Floating Toggle button to reopen legend if closed */}
+      {subMode === "gaia" && !isLegendOpen && (
+        <div className="fixed top-[260px] right-4 z-20">
+          <GlowButton
+            onClick={() => setIsLegendOpen(true)}
+            size="sm"
+            variant="ghost"
+            className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-2 py-1 rounded-none text-[8px] uppercase tracking-wider"
+          >
+            [ Open Legend ]
+          </GlowButton>
+        </div>
+      )}
 
       {/* Right: Stats Panel (appears after polygon draw) */}
       <StatsPanel stats={stats} onClose={clearAnalysis} />
@@ -755,6 +956,16 @@ export default function MapContainer() {
           simulationLoading={simulationLoading}
           simulationStep={simulationStep}
           onClose={() => setIsLayerPanelOpen(false)}
+          disasters={disasters}
+          isScanningDisasters={isScanningDisasters}
+          onRefreshDisasters={fetchDisasters}
+          onDisasterItemClick={(d) => {
+            setActiveDisaster(d);
+            flyTo(d.lng, d.lat, 6);
+            setButterflyClickedLatLng({ lng: d.lng, lat: d.lat });
+          }}
+          activeDisaster={activeDisaster}
+          onCloseDisaster={() => setActiveDisaster(null)}
         />
       )}
 

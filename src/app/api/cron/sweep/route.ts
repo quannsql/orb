@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { cacheGet, cacheSet } from "@/lib/redis";
 import { queryGrok } from "@/lib/grok";
+import { runButterflySimulation } from "@/lib/simulation";
 
 export const maxDuration = 60; // Allow function to run up to 60 seconds (Vercel Hobby max)
 
@@ -121,6 +122,24 @@ Return your response ONLY as a valid JSON object matching the following structur
       history = [resultJson, ...history].slice(0, 15);
       await cacheSet(historyKey, history, 604800);
       console.log(`[ORB Vercel Cron] Generated and cached new alert: ${resultJson.title}`);
+
+      // Pre-generate butterfly simulation in the background without blocking the response
+      const scenarioText = `${resultJson.title}: ${resultJson.analysis}`;
+      try {
+        after(async () => {
+          try {
+            await runButterflySimulation(resultJson.lng, resultJson.lat, scenarioText);
+            console.log(`[ORB Vercel Cron] Pre-generated butterfly simulation for ${resultJson.hotspot}`);
+          } catch (e) {
+            console.error(`[ORB Vercel Cron] Pre-generation of simulation failed:`, e);
+          }
+        });
+      } catch (afterErr) {
+        console.warn("[ORB Vercel Cron] after failed, running simulation fallback:", afterErr);
+        runButterflySimulation(resultJson.lng, resultJson.lat, scenarioText)
+          .then(() => console.log(`[ORB Vercel Cron] Pre-generated butterfly simulation (fallback) for ${resultJson.hotspot}`))
+          .catch((e) => console.error(`[ORB Vercel Cron] Pre-generation of simulation (fallback) failed:`, e));
+      }
 
       return NextResponse.json({ success: true, alert: resultJson });
     } else {

@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { queryGrok } from "@/lib/grok";
 import { cacheGet, cacheSet } from "@/lib/redis";
 import { initBackgroundWorker } from "@/lib/backgroundWorker";
 import { getSession, checkCORS, rateLimitByIP, rateLimitByUser } from "@/lib/auth-api";
+import { runButterflySimulation } from "@/lib/simulation";
 
 const DEFAULT_HANDLES = [
   "visegrad24",
@@ -220,6 +221,24 @@ Return your response ONLY as a valid JSON object matching the following structur
 
     // Set the cooldown key for automatic sweeps (TTL: 2 hours = 7200 seconds)
     await cacheSet(cooldownKey, true, 7200);
+
+    // Pre-generate butterfly simulation in the background without blocking the response
+    const scenarioText = `${resultJson.title}: ${resultJson.analysis}`;
+    try {
+      after(async () => {
+        try {
+          await runButterflySimulation(resultJson.lng, resultJson.lat, scenarioText);
+          console.log(`[Sentinel Sweep] Pre-generated butterfly simulation for ${resultJson.hotspot}`);
+        } catch (e) {
+          console.error(`[Sentinel Sweep] Pre-generation of simulation failed:`, e);
+        }
+      });
+    } catch (afterErr) {
+      console.warn("[Sentinel Sweep] after failed, running simulation fallback:", afterErr);
+      runButterflySimulation(resultJson.lng, resultJson.lat, scenarioText)
+        .then(() => console.log(`[Sentinel Sweep] Pre-generated butterfly simulation (fallback) for ${resultJson.hotspot}`))
+        .catch((e) => console.error(`[Sentinel Sweep] Pre-generation of simulation (fallback) failed:`, e));
+    }
 
     return NextResponse.json(resultJson);
   } catch (error: any) {

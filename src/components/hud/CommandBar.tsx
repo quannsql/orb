@@ -13,7 +13,7 @@ interface CommandBarProps {
   cursorLngLat: [number, number] | null;
   activeMode: SpectralMode | null;
   isConnected: boolean;
-  activeSubMode: "satcom" | "osint" | "butterfly";
+  activeSubMode: "satcom" | "osint" | "butterfly" | "gaia";
   isPerformanceMode: boolean;
   onTogglePerformanceMode: () => void;
 }
@@ -55,14 +55,18 @@ export default function CommandBar({
               ? "bg-plasma-pink shadow-[0_0_8px_rgba(255,0,85,0.6)]"
               : activeSubMode === "butterfly"
                 ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"
-                : "bg-cyan-glow shadow-[0_0_8px_rgba(0,240,255,0.6)]"
+                : activeSubMode === "gaia"
+                  ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                  : "bg-cyan-glow shadow-[0_0_8px_rgba(0,240,255,0.6)]"
           }`} />
           <span className={`text-sm font-mono font-bold tracking-widest ${
             activeSubMode === "osint"
               ? "text-plasma-pink drop-shadow-[0_0_8px_rgba(255,0,85,0.8)]"
               : activeSubMode === "butterfly"
                 ? "text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]"
-                : "glow-text-cyan"
+                : activeSubMode === "gaia"
+                  ? "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                  : "glow-text-cyan"
           }`}>
             ORB
           </span>

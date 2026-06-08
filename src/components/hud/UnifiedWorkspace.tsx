@@ -29,8 +29,8 @@ import RestrictedAccessOverlay from "@/components/ui/RestrictedAccessOverlay";
 
 interface UnifiedWorkspaceProps {
   // Mode & Autopilot
-  activeSubMode: "satcom" | "osint" | "butterfly";
-  onChangeSubMode: (mode: "satcom" | "osint" | "butterfly") => void;
+  activeSubMode: "satcom" | "osint" | "butterfly" | "gaia";
+  onChangeSubMode: (mode: "satcom" | "osint" | "butterfly" | "gaia") => void;
   isAutopilot: boolean;
   onToggleAutopilot: () => void;
   
@@ -69,6 +69,14 @@ interface UnifiedWorkspaceProps {
   simulationLoading: boolean;
   simulationStep: number;
   onClose?: () => void;
+
+  // Gaia Shield
+  disasters?: any[];
+  isScanningDisasters?: boolean;
+  onRefreshDisasters?: () => void;
+  onDisasterItemClick?: (disaster: any) => void;
+  activeDisaster?: any;
+  onCloseDisaster?: () => void;
 }
 
 const SPECTRAL_MODES: { value: SpectralMode | null; label: string; desc: string }[] = [
@@ -131,7 +139,13 @@ export default function UnifiedWorkspace({
   simulationResult,
   simulationLoading,
   simulationStep,
-  onClose
+  onClose,
+  disasters = [],
+  isScanningDisasters = false,
+  onRefreshDisasters,
+  onDisasterItemClick,
+  activeDisaster,
+  onCloseDisaster
 }: UnifiedWorkspaceProps) {
   const { user } = useAuth();
   // Accordion Section States
@@ -147,14 +161,18 @@ export default function UnifiedWorkspace({
   const [simTab, setSimTab] = useState<"summary" | "military" | "economic" | "social">("summary");
   const [scenarioInput, setScenarioInput] = useState("");
 
-  // Sync preset scenarios when coordinates change via map clicks
+  // Sync scenario text when active briefing, active disaster or clicked coordinates change
   useEffect(() => {
-    if (clickedLatLng) {
+    if (activeBriefing) {
+      setScenarioInput(`${activeBriefing.title}: ${activeBriefing.analysis}`);
+    } else if (activeDisaster) {
+      setScenarioInput(`Natural Disaster: ${activeDisaster.title}. Place: ${activeDisaster.place}. Evaluate the humanitarian fallout, infrastructure damage, and supply chain delays caused by this event.`);
+    } else if (clickedLatLng) {
       if (!scenarioInput) {
         setScenarioInput("Geopolitical event causing supply chain disruptions and political shifts.");
       }
     }
-  }, [clickedLatLng]);
+  }, [clickedLatLng, activeBriefing, activeDisaster]);
 
   const runSimulation = () => {
     if (!scenarioInput.trim()) return;
@@ -236,25 +254,31 @@ export default function UnifiedWorkspace({
 
             {expandTelemetry && (
               <div className="flex flex-col gap-2">
-                {/* 3-Way Mode Toggle */}
-                <div className="grid grid-cols-3 gap-0.5 border border-white/10 p-0.5 bg-black/40">
+                {/* 4-Way Mode Toggle */}
+                <div className="grid grid-cols-4 gap-0.5 border border-white/10 p-0.5 bg-black/40">
                   <button 
                     onClick={() => onChangeSubMode("satcom")}
-                    className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "satcom" ? "bg-cyan-glow text-black font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
+                    className={`py-1 text-[7.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "satcom" ? "bg-cyan-glow text-black font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    Satellite View
+                    Satellite
                   </button>
                   <button 
                     onClick={() => onChangeSubMode("osint")}
-                    className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "osint" ? "bg-plasma-pink text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
+                    className={`py-1 text-[7.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "osint" ? "bg-plasma-pink text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    Live Radar
+                    Radar
+                  </button>
+                  <button 
+                    onClick={() => onChangeSubMode("gaia")}
+                    className={`py-1 text-[7.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "gaia" ? "bg-amber-500 text-black font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
+                  >
+                    Gaia
                   </button>
                   <button 
                     onClick={() => onChangeSubMode("butterfly")}
-                    className={`py-1 text-[8.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "butterfly" ? "bg-purple-600 text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
+                    className={`py-1 text-[7.5px] font-bold transition-all duration-150 uppercase ${activeSubMode === "butterfly" ? "bg-purple-600 text-white font-extrabold" : "text-neutral-500 hover:text-neutral-300"}`}
                   >
-                    Simulator
+                    Sim
                   </button>
                 </div>
 
@@ -750,6 +774,116 @@ export default function UnifiedWorkspace({
               </div>
             )}
           </div>
+
+          {/* ── SECTION 7: GAIA SHIELD HAZARD RADAR ── */}
+          {activeSubMode === "gaia" && (
+            <div className="border border-amber-500/20 bg-void/40 p-2">
+              <div 
+                className="flex items-center justify-between border-b border-amber-500/30 pb-1 mb-1.5 cursor-pointer text-[10px] font-bold text-amber-500 uppercase"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Activity size={12} className="text-amber-500 animate-pulse" />
+                  <span>Gaia Shield Eco Radar</span>
+                </div>
+                <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 font-bold">
+                  LIVE
+                </span>
+              </div>
+
+              <div className="relative flex flex-col gap-2 min-h-[150px]">
+                <div className="flex justify-between items-center bg-black/40 p-1 border border-white/5">
+                  <span className="text-[8px] text-neutral-500">FEED: USGS & GDACS</span>
+                  <button 
+                    onClick={onRefreshDisasters}
+                    disabled={isScanningDisasters}
+                    className="text-[8px] text-amber-500 font-bold hover:underline uppercase disabled:text-neutral-500"
+                  >
+                    {isScanningDisasters ? "Refreshing..." : "[ Refresh Feed ]"}
+                  </button>
+                </div>
+
+                {/* Active Disaster Briefing */}
+                {activeDisaster ? (
+                  <div className="bg-amber-500/5 border border-amber-500/20 p-2 rounded-xs mb-1">
+                    <div className="flex justify-between items-center border-b border-amber-500/20 pb-1 mb-1">
+                      <span className="text-[8.5px] font-extrabold text-amber-500 uppercase tracking-widest">
+                        {activeDisaster.type} DETAILS
+                      </span>
+                      <button onClick={onCloseDisaster} className="text-[8.5px] text-neutral-500 hover:text-white uppercase">[ CLOSE ]</button>
+                    </div>
+                    
+                    <div className="text-[10px] font-bold text-white uppercase truncate tracking-wide mb-1.5 border-b border-white/5 pb-1">
+                      {activeDisaster.title}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 bg-black/40 border border-white/5 p-1 text-[8px] text-neutral-400 mb-2">
+                      <div>SEVERITY: <span className="text-white font-semibold">{activeDisaster.severity}</span></div>
+                      <div>COORD: <span className="text-cyan-400">LN:{activeDisaster.lng.toFixed(2)} LA:{activeDisaster.lat.toFixed(2)}</span></div>
+                    </div>
+
+                    <div className="text-[9px] leading-relaxed text-neutral-200 border-b border-white/5 pb-1.5 mb-1.5">
+                      <span className="text-neutral-500 text-[8px] font-bold uppercase block">ANALYSIS:</span>
+                      {activeDisaster.details || "Active natural hazard monitoring. Ready to evaluate downstream socio-economic and logistical impacts."}
+                    </div>
+
+                    <GlowButton
+                      onClick={() => {
+                        onChangeSubMode("butterfly");
+                      }}
+                      variant="ghost"
+                      className="w-full text-[8.5px] py-1 border-amber-500/25 text-amber-400 hover:bg-amber-500/10"
+                    >
+                      EVALUATE DISASTER WITH AI
+                    </GlowButton>
+                  </div>
+                ) : (
+                  <div className="text-[8.5px] text-neutral-600 text-center py-4 border border-dashed border-white/5 italic">
+                    Click a map hazard marker or select from the list below to inspect.
+                  </div>
+                )}
+
+                {/* Disasters List */}
+                <div className="max-h-56 overflow-y-auto pr-1 flex flex-col gap-1.5 custom-scrollbar">
+                  {disasters.length === 0 ? (
+                    <div className="text-[8.5px] text-neutral-600 py-3 text-center italic border border-dashed border-white/5">
+                      No disaster alerts active
+                    </div>
+                  ) : (
+                    disasters.map((d) => {
+                      const levelColors: { [key: string]: string } = {
+                        CRITICAL: "border-plasma-pink/30 hover:border-plasma-pink/70 bg-plasma-pink/5 text-plasma-pink",
+                        HIGH: "border-amber-500/35 hover:border-amber-500/75 bg-amber-500/5 text-amber-400",
+                        ELEVATED: "border-cyan-400/25 hover:border-cyan-400/75 bg-cyan-950/10 text-cyan-400"
+                      };
+
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => onDisasterItemClick?.(d)}
+                          className={`p-1.5 border rounded-xs cursor-pointer transition-all duration-150 text-[8.5px] ${levelColors[d.severity] || "border-neutral-800 text-white"} ${activeDisaster?.id === d.id ? "ring-1 ring-amber-500" : ""}`}
+                        >
+                          <div className="flex justify-between items-center font-bold mb-0.5">
+                            <span className="uppercase font-extrabold">{d.type} ({d.source})</span>
+                            <span className="text-neutral-500 text-[8px] font-medium">
+                              {d.time ? new Date(d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "ACTIVE"}
+                            </span>
+                          </div>
+                          <div className="text-[9px] font-bold text-neutral-100 uppercase truncate">
+                            {d.place}
+                          </div>
+                          {d.magnitude && (
+                            <div className="text-[8px] text-neutral-400">
+                              Magnitude: <span className="text-white font-bold">{d.magnitude}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </GlassPanel>

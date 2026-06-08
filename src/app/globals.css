@@ -694,3 +694,32 @@ body {
     0 0 10px rgba(255, 255, 255, 0.05),
     inset 0 0 20px rgba(255, 255, 255, 0.02);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Gaia Shield - Seismic Ring and Disaster markers
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes seismic-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+.seismic-ring {
+  animation: seismic-pulse 2.2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+}
+
+.disaster-marker {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.disaster-marker:hover {
+  transform: scale(1.15);
+  z-index: 100 !important;
+}
