@@ -23,7 +23,7 @@ async function fetchApifyTweets(): Promise<string[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout for synchronous run
 
-    const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}`, {
+    const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}&maxItems=10`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

@@ -253,7 +253,7 @@ export async function initBackgroundWorker() {
         if (token && !token.startsWith("apify_api_YOUR_TOKEN")) {
           const handles = ["visegrad24", "warsurv", "KobeissiLetter", "OSINTtechnical", "IntelAirForce", "defense_ae"];
           try {
-            const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}`, {
+            const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}&maxItems=5`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
