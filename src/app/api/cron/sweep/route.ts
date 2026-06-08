@@ -14,37 +14,41 @@ export async function GET(request: Request) {
 
     console.log("[ORB Vercel Cron] Running periodic OSINT and Sentinel sweep...");
 
-    const token = process.env.APIFY_API_TOKEN;
+    const apiUrl = process.env.TWIKIT_API_URL;
+    const apiKey = process.env.TWIKIT_API_KEY || "default_secret_key";
     let tweets: string[] = [];
     const historyKey = "sentinel:alerts:history";
 
-    // Attempt apify fetch if configured
-    if (token && !token.startsWith("apify_api_YOUR_TOKEN")) {
+    // Attempt Twikit fetch if configured
+    if (apiUrl) {
       const handles = ["visegrad24", "warsurv", "KobeissiLetter"];
       try {
-        const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}&maxItems=20`, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
+
+        const res = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            twitterHandles: handles,
-            maxItems: 20,
-            sort: "Latest",
-            tweetLanguage: "en",
-            addParentTweets: false
-          })
+            handles: handles,
+            max_items: 5,
+            api_key: apiKey
+          }),
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+
         if (res.ok) {
-          const items = await res.json();
-          if (Array.isArray(items)) {
-            tweets = items
-              .filter((item: any) => item.text)
-              .map((item: any) => `@${item.user?.username || "OSINT"}: "${item.text.replace(/\n/g, " ")}"`);
+          const data = await res.json();
+          if (data.tweets && Array.isArray(data.tweets)) {
+            tweets = data.tweets;
           }
         } else {
-          console.error("[ORB Vercel Cron] Apify API error:", res.status, await res.text());
+          console.error("[ORB Vercel Cron] Twikit API error:", res.status, await res.text());
         }
       } catch (e) {
-        console.error("[ORB Vercel Cron] Apify fetch error during sweep:", e);
+        console.error("[ORB Vercel Cron] Twikit fetch error during sweep:", e);
       }
     }
 

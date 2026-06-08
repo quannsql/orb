@@ -10,30 +10,30 @@ const DEFAULT_HANDLES = [
   "KobeissiLetter",
 ];
 
-async function fetchApifyTweets(): Promise<string[]> {
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token || token.startsWith("apify_api_YOUR_TOKEN")) {
-    console.log("[Sentinel Sweep] APIFY_API_TOKEN not configured or using placeholder. Falling back to simulated intel.");
+async function fetchTwikitTweets(): Promise<string[]> {
+  const apiUrl = process.env.TWIKIT_API_URL;
+  const apiKey = process.env.TWIKIT_API_KEY || "default_secret_key";
+  
+  if (!apiUrl) {
+    console.log("[Sentinel Sweep] TWIKIT_API_URL not configured. Falling back to simulated intel.");
     return [];
   }
 
   try {
-    console.log("[Sentinel Sweep] Triggering Apify Twitter Scraper synchronously...");
+    console.log("[Sentinel Sweep] Triggering Twikit Python Scraper...");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout for synchronous run
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout for scraper
 
-    const res = await fetch(`https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${token}&maxItems=10`, {
+    const res = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        twitterHandles: DEFAULT_HANDLES,
-        maxItems: 10,
-        sort: "Latest",
-        tweetLanguage: "en",
-        addParentTweets: false
+        handles: DEFAULT_HANDLES,
+        max_items: 5,
+        api_key: apiKey
       }),
       signal: controller.signal
     });
@@ -41,18 +41,16 @@ async function fetchApifyTweets(): Promise<string[]> {
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      console.warn(`[Sentinel Sweep] Apify Actor run failed: ${res.status} ${await res.text()}`);
+      console.warn(`[Sentinel Sweep] Twikit API run failed: ${res.status} ${await res.text()}`);
       return [];
     }
 
-    const items = await res.json();
-    if (!Array.isArray(items)) return [];
+    const data = await res.json();
+    if (!data.tweets || !Array.isArray(data.tweets)) return [];
 
-    return items
-      .filter((item: any) => item.text)
-      .map((item: any) => `@${item.user?.username || "OSINT"}: "${item.text.replace(/\n/g, " ")}"`);
+    return data.tweets;
   } catch (err) {
-    console.error("[Sentinel Sweep] Apify fetch error:", err);
+    console.error("[Sentinel Sweep] Twikit fetch error:", err);
     return [];
   }
 }
@@ -128,8 +126,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Fetch real tweets if token is available
-    const tweets = await fetchApifyTweets();
+    // 4. Fetch real tweets if API URL is available
+    const tweets = await fetchTwikitTweets();
 
     let promptDirective = "";
     if (tweets.length > 0) {
