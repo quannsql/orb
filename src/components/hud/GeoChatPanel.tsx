@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import GlassPanel from "@/components/ui/GlassPanel";
 import GlowButton from "@/components/ui/GlowButton";
+import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
 import type { SpectralMode } from "@/types/sentinel";
 import { Bot, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -95,27 +96,27 @@ export default function GeoChatPanel({ onFlyTo, onSetMode, onSetDate, className 
   if (!isOpen) {
     return (
       <div className={`fixed z-50 pointer-events-auto transition-all duration-300 ${className || "bottom-14 right-4"}`}>
-        <GlowButton onClick={() => setIsOpen(true)} className="rounded-none w-12 h-12 flex items-center justify-center p-0" variant="white">
-          <Bot size={20} className="text-white animate-pulse" />
+        <GlowButton onClick={() => setIsOpen(true)} className="rounded-none w-10 h-10 flex items-center justify-center p-0" variant="white">
+          <Bot size={16} className="text-white animate-pulse" />
         </GlowButton>
       </div>
     );
   }
 
   return (
-    <GlassPanel className={`fixed w-80 h-96 flex flex-col z-50 pointer-events-auto transition-all duration-300 ${className || "bottom-14 right-4"}`}>
-      <div className="flex items-center justify-between border-b border-white/10 p-3 bg-black/50">
+    <GlassPanel glowColor="white" className={`fixed w-80 h-96 flex flex-col z-50 pointer-events-auto transition-all duration-300 ${className || "bottom-14 right-4"}`}>
+      <div className="flex items-center justify-between border-b border-white/10 p-2.5 bg-black/80 shrink-0">
         <div className="flex items-center gap-2">
-          <Bot size={14} className="text-white animate-pulse" />
-          <h2 className="text-xs font-mono text-white uppercase tracking-wider font-bold">
+          <Bot size={13} className="text-white animate-pulse" />
+          <h2 className="text-[10px] font-mono text-white uppercase tracking-wider font-extrabold">
             ORB Oracle
           </h2>
         </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="bg-red-600/80 hover:bg-red-600 text-white transition-colors p-1 flex items-center justify-center rounded-none"
+          className="bg-black border border-white/25 hover:bg-white hover:text-black text-white transition-all px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded-none cursor-pointer"
         >
-          <X size={12} />
+          [ CLOSE ]
         </button>
       </div>
       
@@ -123,37 +124,41 @@ export default function GeoChatPanel({ onFlyTo, onSetMode, onSetDate, className 
         <RestrictedAccessOverlay moduleName="ORB ORACLE CHAT" className="rounded-t-none" />
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-3 font-mono text-xs">
+      <div className="flex-1 overflow-y-auto p-3.5 custom-scrollbar flex flex-col gap-3 font-mono text-xs">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] p-2 rounded-none ${msg.role === "user" ? "bg-white/10 text-white border border-white/10" : "bg-black/50 text-neutral-200 border border-white/5"}`}>
-              <span className="opacity-50 text-[9px] block mb-1">
-                {msg.role === "user" ? "> USER_INPUT" : "> SYSTEM_RESPONSE"}
+            <div className={`max-w-[85%] p-2 rounded-none text-[9px] leading-relaxed ${msg.role === "user" ? "bg-white/10 text-white border border-white/15" : "bg-white/5 text-neutral-200 border border-white/5"}`}>
+              <span className="opacity-40 text-[7.5px] block mb-1 font-bold">
+                {msg.role === "user" ? "> USER_INPUT" : "> ORACLE_SYSTEM"}
               </span>
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <MarkdownRenderer content={msg.content} compact />
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-[85%] p-2 rounded-none bg-black/50 text-neutral-400 border border-white/5 animate-pulse">
-              Processing...
+            <div className="max-w-[85%] p-2 rounded-none bg-white/5 text-neutral-500 border border-white/5 text-[9px] animate-pulse">
+              [ TRANSMITTING DECRYPTED DATA... ]
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 border-t border-white/10 bg-black/50 flex gap-2">
+      <div className="p-2.5 border-t border-white/10 bg-black/80 flex gap-2 shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Command..."
-          className="flex-1 bg-transparent border border-white/10 rounded-none px-2 py-1 text-neutral-100 text-xs font-mono focus:outline-none focus:border-neutral-400"
+          placeholder="ENTER SYSTEM DIRECTIVES..."
+          className="flex-1 bg-black border border-white/10 rounded-none px-2 py-1 text-neutral-100 text-[9px] font-mono focus:outline-none focus:border-white/50 placeholder:text-neutral-600"
         />
-        <GlowButton onClick={handleSend} disabled={isLoading} variant="white" className="px-3 py-1 text-xs">
+        <GlowButton onClick={handleSend} disabled={isLoading} variant="white" className="px-3 py-1 text-[9px] font-bold">
           TX
         </GlowButton>
       </div>

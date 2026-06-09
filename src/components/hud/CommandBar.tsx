@@ -45,31 +45,40 @@ export default function CommandBar({
   return (
     <div
       id="command-bar"
-      className="glass-panel slide-in-down fixed top-0 left-0 right-0 w-full h-12 rounded-none border-t-0 border-x-0 z-40 flex items-center justify-between px-6 py-2"
+      className="glass-panel slide-in-down fixed top-0 left-0 right-0 w-full h-10 rounded-none border-t-0 border-x-0 z-40 flex items-center justify-between px-6 py-1 border-white/10"
     >
       {/* Left section: Brand and coordinates */}
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 pr-4 border-r border-neutral-600/30">
-          <div className={`w-2 h-2 rounded-full animate-pulse ${
-            activeSubMode === "osint"
-              ? "bg-plasma-pink shadow-[0_0_8px_rgba(255,0,85,0.6)]"
-              : activeSubMode === "butterfly"
-                ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"
-                : activeSubMode === "gaia"
-                  ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
-                  : "bg-cyan-glow shadow-[0_0_8px_rgba(0,240,255,0.6)]"
-          }`} />
-          <span className={`text-sm font-mono font-bold tracking-widest ${
-            activeSubMode === "osint"
-              ? "text-plasma-pink drop-shadow-[0_0_8px_rgba(255,0,85,0.8)]"
-              : activeSubMode === "butterfly"
-                ? "text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]"
-                : activeSubMode === "gaia"
-                  ? "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
-                  : "glow-text-cyan"
-          }`}>
-            ORB
-          </span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 pr-4 border-r border-neutral-600/20">
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            {/* Blinking connection indicator around logo */}
+
+            {/* Logo Image */}
+            <img
+              src="/assets/images/orb-logo.png"
+              alt="ORB"
+              className="w-5 h-5 object-contain z-10 transition-all"
+              onError={(e) => {
+                // Hide image and display fallback circular tech SVG icon
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.parentElement?.querySelector('.fallback-logo');
+                if (fallback) fallback.removeAttribute('style');
+              }}
+            />
+            {/* Fallback Vector Tech Icon */}
+            <svg
+              className="fallback-logo w-4.5 h-4.5 text-white animate-pulse z-10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              style={{ display: "none" }}
+            >
+              <circle cx="12" cy="12" r="10" strokeDasharray="3 3" />
+              <circle cx="12" cy="12" r="5" />
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+            </svg>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 hidden sm:flex">
@@ -82,7 +91,7 @@ export default function CommandBar({
             }
             color="white"
             size="sm"
-            className="w-[85px]"
+            className="w-[80px]"
           />
           <DataLabel
             label="LNG"
@@ -93,7 +102,7 @@ export default function CommandBar({
             }
             color="white"
             size="sm"
-            className="w-[85px]"
+            className="w-[80px]"
           />
         </div>
       </div>
@@ -125,9 +134,9 @@ export default function CommandBar({
         </div>
 
 
-        <div className="flex items-center gap-2 pl-4 border-l border-neutral-600/30 hidden sm:flex">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[rgba(0,240,255,0.08)] border border-[rgba(0,240,255,0.2)] text-[10px] font-mono text-cyan-glow uppercase">
-            {activeMode && <span className="w-1.5 h-1.5 rounded-full bg-cyan-glow" />}
+        <div className="flex items-center gap-2 pl-4 border-l border-neutral-600/20 hidden sm:flex">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-white/5 border border-white/10 text-[9px] font-mono text-white uppercase tracking-wider">
+            {activeMode && <span className="w-1 h-1 rounded-none bg-white animate-pulse" />}
             {getFriendlyModeName(activeMode)}
           </span>
         </div>

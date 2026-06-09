@@ -26,7 +26,7 @@ import GlassPanel from "@/components/ui/GlassPanel";
 import GlowButton from "@/components/ui/GlowButton";
 import * as turf from "@turf/turf";
 import mapboxgl from "mapbox-gl";
-import { Layers, X, Target } from "lucide-react";
+import { Layers, X, Target, Info } from "lucide-react";
 
 export default function MapContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,7 +80,7 @@ export default function MapContainer() {
   const [disasters, setDisasters] = useState<any[]>([]);
   const [isScanningDisasters, setIsScanningDisasters] = useState(false);
   const [activeDisaster, setActiveDisaster] = useState<any | null>(null);
-  const [isLegendOpen, setIsLegendOpen] = useState(true);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
   const activeDisasterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   // Sentinel Imagery
@@ -814,10 +814,10 @@ export default function MapContainer() {
       {/* Gaia Shield Legend */}
       {subMode === "gaia" && isLegendOpen && (
         <div className="fixed top-[260px] right-4 z-20 w-80 slide-in-right" id="gaia-legend">
-          <GlassPanel padding="sm" glowColor="amber" className="bg-black/90 rounded-none border border-amber-500/20">
+          <GlassPanel padding="sm" glowColor="white" className="bg-black/90 rounded-none border border-white/10">
             {/* Header */}
-            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-[rgba(255,190,11,0.15)]">
-              <span className="text-[9px] font-mono text-amber-400 uppercase tracking-widest font-extrabold">
+            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-white/10">
+              <span className="text-[9px] font-mono text-white/80 uppercase tracking-widest font-extrabold">
                 ◈ Gaia Shield Legend
               </span>
               <button 
@@ -836,24 +836,24 @@ export default function MapContainer() {
                 <div className="flex flex-col gap-1.5 pl-1">
                   <div className="flex items-center gap-2.5">
                     <div className="relative flex items-center justify-center w-4 h-4">
-                      <div className="absolute w-full h-full rounded-full border border-plasma-pink bg-plasma-pink/20 animate-ping"></div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-plasma-pink"></div>
+                      <div className="absolute w-full h-full rounded-full border border-white/40 bg-white/10"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-white/60"></div>
                     </div>
-                    <span className="text-neutral-200">Mag &gt;= 6.0 (Critical)</span>
+                    <span className="text-neutral-300">Mag &gt;= 6.0 (Critical)</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="relative flex items-center justify-center w-4 h-4">
-                      <div className="absolute w-full h-full rounded-full border border-amber-500 bg-amber-500/20"></div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-amber-500"></div>
+                      <div className="absolute w-full h-full rounded-full border border-white/25 bg-white/5"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/80 border border-white/40"></div>
                     </div>
-                    <span className="text-neutral-200">Mag 5.0 - 5.9 (High)</span>
+                    <span className="text-neutral-300">Mag 5.0 - 5.9 (High)</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="relative flex items-center justify-center w-4 h-4">
-                      <div className="absolute w-full h-full rounded-full border border-cyan-400 bg-cyan-400/20"></div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-white border border-cyan-400"></div>
+                      <div className="absolute w-full h-full rounded-full border border-white/15 bg-white/5"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/60 border border-white/25"></div>
                     </div>
-                    <span className="text-neutral-200">Mag 4.5 - 4.9 (Elevated)</span>
+                    <span className="text-neutral-300">Mag 4.5 - 4.9 (Elevated)</span>
                   </div>
                 </div>
               </div>
@@ -864,19 +864,19 @@ export default function MapContainer() {
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pl-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs">🌀</span>
-                    <span className="text-neutral-200">Cyclone/Storm</span>
+                    <span className="text-neutral-300">Cyclone/Storm</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs">🌋</span>
-                    <span className="text-neutral-200">Volcano Alert</span>
+                    <span className="text-neutral-300">Volcano Alert</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs">🌊</span>
-                    <span className="text-neutral-200">Flood Threat</span>
+                    <span className="text-neutral-300">Flood Threat</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-amber-500 filter drop-shadow-[0_0_2px_rgba(255,190,11,0.5)]">⚠</span>
-                    <span className="text-neutral-200">Drought/Other</span>
+                    <span className="text-xs text-white/50">⚠</span>
+                    <span className="text-neutral-300">Drought/Other</span>
                   </div>
                 </div>
               </div>
@@ -888,14 +888,13 @@ export default function MapContainer() {
       {/* Floating Toggle button to reopen legend if closed */}
       {subMode === "gaia" && !isLegendOpen && (
         <div className="fixed top-[260px] right-4 z-20">
-          <GlowButton
+          <button
             onClick={() => setIsLegendOpen(true)}
-            size="sm"
-            variant="ghost"
-            className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-2 py-1 rounded-none text-[8px] uppercase tracking-wider"
+            className="p-1.5 rounded border border-white/15 bg-black/70 backdrop-blur-sm text-white/50 hover:text-white hover:border-white/30 transition-all cursor-pointer"
+            title="Open Gaia Legend"
           >
-            [ Open Legend ]
-          </GlowButton>
+            <Info size={14} />
+          </button>
         </div>
       )}
 

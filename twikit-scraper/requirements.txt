@@ -1,5 +1,7 @@
-twikit==2.3.3
 fastapi
 uvicorn
-pydantic
+twikit
 python-dotenv
+httpx
+feedparser
+upstash-redis

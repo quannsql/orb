@@ -2,10 +2,7 @@ name: ORB Sentinel Background Sweep
 
 on:
   schedule:
-    # Runs every 90 minutes
-    # Standard cron doesn't support exactly 90 mins easily, so we use every 2 hours as a safe baseline
-    # Or to hit ~90 mins we can run at specific hours. 
-    # For now, let's trigger every 2 hours:
+    # Runs every 2 hours as backup trigger
     - cron: '0 */2 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
@@ -13,8 +10,29 @@ jobs:
   sweep:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Vercel OSINT Sweep API
+      - name: Trigger Railway Brain Sweep (Primary)
+        id: railway
+        continue-on-error: true
         run: |
+          echo "Triggering Railway Brain multi-agent sweep..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RAILWAY_BRAIN_URL }}/run-sweep" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.RAILWAY_API_KEY }}" \
+            -d '{"force": false}' \
+            --max-time 180)
+          echo "Railway response code: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Railway sweep successful"
+          else
+            echo "Railway sweep failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Trigger Vercel Sweep (Fallback)
+        if: steps.railway.outcome == 'failure'
+        run: |
+          echo "Railway failed, triggering Vercel fallback..."
           curl -X GET "https://orb-rust.vercel.app/api/cron/sweep" \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-          --max-time 120
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --max-time 120

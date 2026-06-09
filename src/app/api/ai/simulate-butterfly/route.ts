@@ -45,7 +45,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Generate or retrieve simulation using helper
+    // ── Try Railway Brain API first (multi-agent debate simulation) ──
+    const railwayUrl = process.env.RAILWAY_BRAIN_URL;
+    const railwayApiKey = process.env.RAILWAY_API_KEY;
+
+    if (railwayUrl) {
+      try {
+        console.log("[Butterfly] Calling Railway Brain for multi-agent debate simulation...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+        const railwayRes = await fetch(`${railwayUrl}/simulate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": railwayApiKey || "",
+          },
+          body: JSON.stringify({ lng, lat, scenario }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (railwayRes.ok) {
+          const resultJson = await railwayRes.json();
+          console.log("[Butterfly] Railway debate simulation completed");
+          return NextResponse.json(resultJson);
+        } else {
+          console.warn(`[Butterfly] Railway returned ${railwayRes.status}, falling back to local`);
+        }
+      } catch (railwayErr) {
+        console.warn("[Butterfly] Railway unreachable, falling back to local:", railwayErr);
+      }
+    }
+
+    // ── Fallback: Local single-agent simulation ──
+    console.log("[Butterfly] Running local fallback (single-agent mode)...");
     const resultJson = await runButterflySimulation(lng, lat, scenario);
 
     return NextResponse.json(resultJson);
@@ -57,3 +92,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

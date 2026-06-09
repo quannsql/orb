@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Parse request body to check for "force" parameter
+    // Parse request body to check for "force" parameter
     let force = false;
     try {
       const body = await request.json();
@@ -114,9 +114,8 @@ export async function POST(request: Request) {
     const cooldownKey = "sentinel:sweep:cooldown";
 
     const recentAlerts = await cacheGet<any[]>(historyKey) || [];
-    const recentHotspots = Array.from(new Set(recentAlerts.map((h: any) => h.hotspot).filter(Boolean))).slice(0, 5);
 
-    // 3. Cooldown check (only if not forced)
+    // Cooldown check (only if not forced)
     if (!force) {
       const cooldownActive = await cacheGet(cooldownKey);
       if (cooldownActive) {
@@ -127,7 +126,57 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Fetch real tweets if API URL is available
+    // ── Try Railway Brain API first (multi-agent debate) ──
+    const railwayUrl = process.env.RAILWAY_BRAIN_URL;
+    const railwayApiKey = process.env.RAILWAY_API_KEY;
+
+    if (railwayUrl) {
+      try {
+        console.log("[Sentinel AI] Calling Railway Brain for multi-agent debate...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout for debate
+
+        const railwayRes = await fetch(`${railwayUrl}/run-sweep`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": railwayApiKey || "",
+          },
+          body: JSON.stringify({ force }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (railwayRes.ok) {
+          const resultJson = await railwayRes.json();
+          console.log(`[Sentinel AI] Railway debate completed: ${resultJson.title}`);
+
+          // Railway already saved to Redis, but ensure local cache is fresh
+          let history = await cacheGet<any[]>(historyKey);
+          if (!Array.isArray(history)) history = [];
+          const exists = history.some((h: any) => h.id === resultJson.id);
+          if (!exists) {
+            history = [resultJson, ...history].slice(0, 15);
+            await cacheSet(historyKey, history, 604800);
+          }
+          await cacheSet(cooldownKey, true, 7200);
+
+          return NextResponse.json(resultJson);
+        } else {
+          console.warn(`[Sentinel AI] Railway returned ${railwayRes.status}, falling back to local`);
+        }
+      } catch (railwayErr) {
+        console.warn("[Sentinel AI] Railway unreachable, falling back to local:", railwayErr);
+      }
+    }
+
+    // ── Fallback: Local queryGrok (single-agent, no debate) ──
+    console.log("[Sentinel AI] Running local fallback (single-agent mode)...");
+
+    const recentHotspots = Array.from(new Set(recentAlerts.map((h: any) => h.hotspot).filter(Boolean))).slice(0, 5);
+
+    // Fetch real tweets if API URL is available
     const tweets = await fetchTwikitTweets();
 
     let promptDirective = "";
@@ -145,7 +194,7 @@ ${tweets.map(t => `- ${t}`).join("\n")}
       promptDirective = `
 CRITICAL DIRECTIVE:
 1. Since no live OSINT tweets are currently available, you MUST identify an ongoing or recent (2025/2026) REAL-WORLD geopolitical conflict, military standoff, border tension, or critical supply chain disruption globally.
-2. Select a highly dynamic, realistic, and specific hotspot/location anywhere on Earth. Do NOT restrict yourself to a fixed list of common locations. It can be any region, country border, strait, ocean, canal, or port (e.g. Red Sea, North Sea, Baltic borders, South America borders, Aegean Sea, Cyprus, Arctic Passage, Gulf of Aden, Panama Canal, DMZ, Gibraltar, Suez Canal, Strait of Hormuz, Taiwan Strait, South China Sea, etc.), representing a genuine global flashpoint.
+2. Select a highly dynamic, realistic, and specific hotspot/location anywhere on Earth.
 3. You MUST NOT select any of these recently reported hotspots to avoid redundancy: ${JSON.stringify(recentHotspots)}. Choose a completely different region/country.
 4. You MUST research your internal knowledge for the actual coordinate location (latitude and longitude) of this event/hotspot and return it.
 `;
@@ -156,11 +205,8 @@ Analyze the following source intelligence and detect any critical geopolitical, 
 
 ${promptDirective}
 
-Generate a realistic, professional, and slightly alarming military/economic analyst report using the grok-4.3 model.
-Focus on:
-1. Geopolitical fallout: Border closures or hostile patrols.
-2. Economic impact: Disrupted commodities, supply chain delay rates, shipping detour routes.
-3. Military threat level.
+Generate a realistic, professional, and slightly alarming military/economic analyst report.
+Use markdown formatting: **bold** for key terms, bullet points for lists, ### for section headers.
 
 Return your response ONLY as a valid JSON object matching the following structure (no backticks, no markdown formatting):
 {
@@ -171,7 +217,7 @@ Return your response ONLY as a valid JSON object matching the following structur
   "lng": [longitude],
   "lat": [latitude],
   "threatLevel": "CRITICAL | HIGH | ELEVATED",
-  "analysis": "A concise paragraph explaining the tactical situation...",
+  "analysis": "A concise paragraph explaining the tactical situation with **bold** key terms and bullet points...",
   "impact": "1-2 sentences outlining the specific supply chain / geopolitical bottleneck impact...",
   "status": "ACTIVE ACTION REQUIRED"
 }`;
@@ -202,24 +248,13 @@ Return your response ONLY as a valid JSON object matching the following structur
     }
     resultJson.timestamp = new Date().toISOString();
 
-    // 5. Append to history list in Redis (max 15 items)
+    // Append to history list in Redis (max 15 items)
     let history = await cacheGet<any[]>(historyKey);
     if (!Array.isArray(history)) {
       history = [];
     }
-
-    // Add the new result to the beginning
-    history = [resultJson, ...history];
-
-    // Limit to 15 items
-    if (history.length > 15) {
-      history = history.slice(0, 15);
-    }
-
-    // Cache the updated history (TTL: 7 days = 604800 seconds)
+    history = [resultJson, ...history].slice(0, 15);
     await cacheSet(historyKey, history, 604800);
-
-    // Set the cooldown key for automatic sweeps (TTL: 2 hours = 7200 seconds)
     await cacheSet(cooldownKey, true, 7200);
 
     // Pre-generate butterfly simulation in the background without blocking the response

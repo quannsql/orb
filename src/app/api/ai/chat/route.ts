@@ -29,6 +29,11 @@ Available actions:
 - setDate: requires "date" (string: "YYYY-MM-DD").
 
 Be brief and direct in your text response.
+Format your responses with proper markdown:
+- Use **bold** for emphasis and key terms.
+- Use bullet points for lists of findings or instructions.
+- Use ### for section headers when the response has multiple parts.
+- Keep paragraphs short and impactful.
 `;
 
 export async function POST(request: Request) {
